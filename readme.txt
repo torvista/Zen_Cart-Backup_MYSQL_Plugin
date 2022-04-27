@@ -87,5 +87,6 @@ Feb 28/06 - Completed support for individual table export (&tables=xxx,xxxx,xxxx
 Apr 28/07 - Updated contrib to new version number: 1.3 -- auto-handles lock-tables limitations and various bugfixes
 Jan 04/08 - Updated to 1.3.5, compression improvements
 Jun 2010 - Updated to v1.4 - includes PHP 5.3 fixes and smarter detection of whether exec() is disabled
+Dec 9/2011 - Updated to v1.5 - with additional file to register page for 1.5.0
 
 
