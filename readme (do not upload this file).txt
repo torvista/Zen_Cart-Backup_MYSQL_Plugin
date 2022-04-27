@@ -86,3 +86,4 @@ Dec 9/2011 - Updated to v1.5 - with additional file to register page for 1.5.0
 July 3/2012 - Updated to better detect and avoid display of files that aren't related to backups
 June 12/2015 - Updated avoid inserting null value for integer field when restoring data.
 Dec 2018 - Dropped support for ZC v1.3.x (it still works, but the menu option doesn't get installed)
+06/11/2020 - Fixed Warning: "continue" targeting switch is equivalent to "break". Did you mean to use "continue 2"? in backup_mysql.php on line 518 $mprough
