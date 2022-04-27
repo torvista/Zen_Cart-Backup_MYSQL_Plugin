@@ -122,7 +122,7 @@
 
         $dump_params .= ' "--host=' . DB_SERVER . '"';
         $dump_params .= ' "--user=' . DB_SERVER_USERNAME . '"';
-        $dump_params .= ' "--password=' . DB_SERVER_PASSWORD . '"';
+        $dump_params .= ' "--password=' . escapeshellcmd(DB_SERVER_PASSWORD) . '"';
         $dump_params .= ' --opt';   //"optimized" -- turns on all "fast" and optimized export methods
         $dump_params .= ' --complete-insert';  // undo optimization slightly and do "complete inserts"--lists all column names for benefit of restore of diff systems
         if ($skip_locks_requested) {
@@ -255,7 +255,7 @@
         $load_params  = ' "--database=' . DB_DATABASE . '"';
         $load_params .= ' "--host=' . DB_SERVER . '"';
         $load_params .= ' "--user=' . DB_SERVER_USERNAME . '"';
-        $load_params .= ((DB_SERVER_PASSWORD =='') ? '' : ' "--password=' . DB_SERVER_PASSWORD . '"');
+        $load_params .= ((DB_SERVER_PASSWORD =='') ? '' : ' "--password=' . escapeshellcmd(DB_SERVER_PASSWORD) . '"');
         $load_params .= ' ' . DB_DATABASE; // this needs to be the 2nd-last parameter
         $load_params .= ' < "' . $restore_from . '"'; // this needs to be the LAST parameter
         $load_params .= " 2>&1";
