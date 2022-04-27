@@ -17,9 +17,8 @@
 // | to obtain it through the world-wide-web, please send a note to       |
 // | license@zen-cart.com so we can mail you a copy immediately.          |
 // +----------------------------------------------------------------------+
-//  $Id: backup_mysql.php,v 1.2 2004/07/01 12:13:42 ajeh Exp $
+// $Id: backup_mysql.php,v 1.3 2007/04/28 00:00:00 DrByte Exp $
 //
-?>
-<?php
+
   $za_contents[] = array('text' => BOX_TOOLS_BACKUP_MYSQL, 'link' => zen_href_link(FILENAME_BACKUP_MYSQL, '', 'NONSSL'));
 ?>

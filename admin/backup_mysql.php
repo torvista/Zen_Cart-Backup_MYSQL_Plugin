@@ -17,19 +17,24 @@
 // | to obtain it through the world-wide-web, please send a note to       |
 // | license@zen-cart.com so we can mail you a copy immediately.          |
 // +----------------------------------------------------------------------+
-// $Id: backup_mysql.php,v 1.2.0.10a 2006/01/10 00:00:00 DrByte Exp $
+// $Id: backup_mysql.php,v 1.3 2007/04/28 00:00:00 DrByte Exp $
 //
+
+  define('OS_DELIM', '');
 
   require('includes/application_top.php');
   $debug = '';
   $dump_params = '';
-  $tables_to_export = '';
+  $tables_to_export = (isset($_GET['tables']) && $_GET['tables'] !='') ? str_replace(',',' ',$_GET['tables']) : '';
+  $redirect= (isset($_GET['returnto']) && $_GET['returnto'] !='') ? $_GET['returnto'] : '';
   $resultcodes = '';
-  $_POST['compress'] = (isset($_POST['compress'])) ? $_POST['compress'] : false;
+  $_POST['compress'] = (isset($_REQUEST['compress'])) ? $_REQUEST['compress'] : false;
   $strA = '';
   $strB = '';
   $compress_override = ((isset($_GET['comp']) && $_GET['comp']>0) || COMPRESS_OVERRIDE=='true') ? true : false;
   if (isset($_GET['debug']) && ($_GET['debug']=='ON' || $_GET['debug']>0)) $debug='ON';
+  $skip_locks_requested = (isset($_REQUEST['skiplocks']) && $_REQUEST['skiplocks'] == 'yes');
+
 
 // check to see if open_basedir restrictions in effect -- if so, likely won't be able to use this tool.
   $flag_basedir = false;
@@ -55,15 +60,15 @@
 // These can occasionally be overridden in the URL by specifying &tool=/path/to/foo/bar/plus/utilname, depending on server support
 // Do not change them here ... edit the LANGUAGES file instead.
 // the following lines check to be sure that they've been entered correctly in the language file
-  $pathsearch=array(str_replace('mysql','',LOCAL_EXE_MYSQL).'/',str_replace('mysql.exe','',LOCAL_EXE_MYSQL).'/','/usr/bin/','/usr/local/bin/','/usr/local/mysql/bin/','c:/mysql/bin/','d:/mysql/bin/','e:/mysql/bin/', 'c:/apache2triad/mysql/bin/', 'd:/apache2triad/mysql/bin/', 'e:/apache2triad/mysql/bin/', 'c:/server/mysql/bin/', '\'c:/Program Files/MySQL/MySQL Server 5.0/bin/\'', '\'d:\\Program Files\\MySQL\\MySQL Server 5.0\\bin\\\'');
+  $pathsearch=array(str_replace('mysql','',LOCAL_EXE_MYSQL).'/',str_replace('mysql.exe','',LOCAL_EXE_MYSQL).'/','/usr/bin/','/usr/local/bin/','/usr/local/mysql/bin/','c:/mysql/bin/','d:/mysql/bin/','e:/mysql/bin/', 'c:/apache2triad/mysql/bin/', 'd:/apache2triad/mysql/bin/', 'e:/apache2triad/mysql/bin/', 'c:/server/mysql/bin/', '\'c:/Program Files/MySQL/MySQL Server 5.0/bin/\'', '\'d:\\Program Files\\MySQL\\MySQL Server 5.0\\bin\\\'', '\'c:/Program Files/MySQL/MySQL Server 4.1/bin/\'');
   $pathsearch=array_merge($pathsearch,explode(':',$open_basedir));
   $mysql_exe = 'unknown';
   $mysqldump_exe = 'unknown';
   foreach($pathsearch as $path){
-//  	$path = str_replace('\\','/',$path); // convert backslashes
-  	$path = str_replace('//','/',$path); // convert double slashes to singles
+//    $path = str_replace('\\','/',$path); // convert backslashes
+    $path = str_replace('//','/',$path); // convert double slashes to singles
     $path = str_replace("'","",$path); // remove ' marks if any
-  	$path = (substr($path,-1)!='/' && substr($path,-1)!='\\') ? $path . '/' : $path; // add a '/' to the end if missing
+    $path = (substr($path,-1)!='/' && substr($path,-1)!='\\') ? $path . '/' : $path; // add a '/' to the end if missing
 
     if ($mysql_exe == 'unknown') {
       if (@file_exists($path.'mysql'))     $mysql_exe = $path.'mysql';
@@ -78,11 +83,11 @@
   }
 
   if (!$mysqldump_exe){
-  	$messageStack->add_session('WARNING: "mysqldump" binary not found. Backups may not work.<br />Please set full path to MYSQLDUMP binary in langauges/backup_mysql.php','error');
+    $messageStack->add_session('WARNING: "mysqldump" binary not found. Backups may not work.<br />Please set full path to MYSQLDUMP binary in langauges/backup_mysql.php','error');
     $mysqldump_exe = ((@file_exists($mysqldump_exe) ? $mysqldump_exe : 'mysqldump' ) );
   }
   if (!$mysql_exe){
-  	$messageStack->add_session('WARNING: "mysql" binary not found. Restores may not work.<br />Please set full path to MYSQL binary in langauges/backup_mysql.php','error');
+    $messageStack->add_session('WARNING: "mysql" binary not found. Restores may not work.<br />Please set full path to MYSQL binary in langauges/backup_mysql.php','error');
     $mysql_exe =     ((@file_exists($mysql_exe) ? $mysql_exe : 'mysql' ) );
   }
   if ($mysql_exe == 'unknown') {
@@ -111,15 +116,15 @@
       case 'backupnow':
         zen_set_time_limit(250);  // not sure if this is needed anymore?
 
-        $backup_file = 'db_' . DB_DATABASE . '-' . date('YmdHis') . '.sql';
+        $backup_file = 'db_' . DB_DATABASE . '-' . ($tables_to_export != '' ? 'limited-' : '' ) . date('YmdHis') . '.sql';
 
         $dump_params .= ' "--host=' . DB_SERVER . '"';
         $dump_params .= ' "--user=' . DB_SERVER_USERNAME . '"';
         $dump_params .= ' "--password=' . DB_SERVER_PASSWORD . '"';
         $dump_params .= ' --opt';   //"optimized" -- turns on all "fast" and optimized export methods
         $dump_params .= ' --complete-insert';  // undo optimization slightly and do "complete inserts"--lists all column names for benefit of restore of diff systems
-        if (isset($_POST['skiplocks']) && $_POST['skiplocks'] == 'yes') {
-          $dump_params .= ' --skip-lock-tables';     //use this if your host prevents you from locking tables for backup
+        if ($skip_locks_requested) {
+          $dump_params .= ' --skip-lock-tables --skip-add-locks';     //use this if your host prevents you from locking tables for backup
         }
 //        $dump_params .= ' --skip-comments'; // mysqldump inserts '--' as comment delimiters, which is invalid on import (only for mysql v4.01+)
 //        $dump_params .= ' --skip-quote-names';
@@ -134,15 +139,18 @@
         $dump_params .= " 2>&1";
 
         $toolfilename = (isset($_GET['tool']) && $_GET['tool'] != '') ? $_GET['tool'] : $mysqldump_exe;
-        if ($debug=='ON') $messageStack->add_session('COMMAND: '.$toolfilename . ' ' . $dump_params, 'caution');
+
+        // remove " marks in parameters for friendlier IIS support
+//REQUIRES TESTING:        if (strstr($toolfilename,'.exe')) $dump_params = str_replace('"','',$dump_params);
+
+        if ($debug=='ON') $messageStack->add_session('COMMAND: '.OS_DELIM.$toolfilename . ' ' . $dump_params.OS_DELIM, 'caution');
 
 
-
-        $resultcodes = @exec($toolfilename . $dump_params , $output, $dump_results );
-        @exec("exit(0)"); 
+        $resultcodes = @exec(OS_DELIM . $toolfilename . $dump_params . OS_DELIM, $output, $dump_results );
+        @exec("exit(0)");
         if ($dump_results == -1) $messageStack->add_session(FAILURE_BACKUP_FAILED_CHECK_PERMISSIONS . '<br />The command being run is: ' . $toolfilename . str_replace('--password='.DB_SERVER_PASSWORD,'--password=*****', str_replace('2>&1','',$dump_params)), 'error');
         if ($debug=='ON' || (zen_not_null($dump_results) && $dump_results!='0')) $messageStack->add_session('Result code: '.$dump_results, 'caution');
-   
+
         #parse the value that comes back from the script
         if (zen_not_null($resultcodes)) list($strA, $strB) = split ('[|]', $resultcodes);
         if ($debug=='ON') $messageStack->add_session("valueA: " . $strA,'error');
@@ -155,6 +163,9 @@
           $messageStack->add_session('<a href="' . ((ENABLE_SSL_ADMIN == 'true') ? DIR_WS_HTTPS_ADMIN : DIR_WS_ADMIN) . 'backups/' . $backup_file . '">' . SUCCESS_DATABASE_SAVED . '</a>', 'success');
         } elseif ($dump_results=='127') {
           $messageStack->add_session(FAILURE_DATABASE_NOT_SAVED_UTIL_NOT_FOUND, 'error');
+        } elseif (stristr($strA, 'Access denied') && stristr($strA, 'LOCK TABLES') ) {
+          unlink(DIR_FS_BACKUP . $backup_file);
+          zen_redirect(zen_href_link(FILENAME_BACKUP_MYSQL, 'action=backupnow'.(($debug=='ON')?'&debug=ON':'') . (($_POST['compress']!=false)?'&compress='.$_POST['compress']:'') . (($tables_to_export!='')?'&tables='.str_replace(' ',',',$tables_to_export):'') . '&skiplocks=yes'));
         } else {
           $messageStack->add_session(FAILURE_DATABASE_NOT_SAVED, 'error');
         }
@@ -250,10 +261,14 @@
 
         if (file_exists($restore_from) && $specified_restore_file != '') {
           $toolfilename = (isset($_GET['tool']) && $_GET['tool'] != '') ? $_GET['tool'] : $mysql_exe;
-          if ($debug=='ON') $messageStack->add_session('COMMAND: '.$toolfilename . ' ' . $dump_params, 'caution');
 
-          $resultcodes=exec($toolfilename . $load_params , $output, $load_results );
-          exec("exit(0)"); 
+          // remove " marks in parameters for friendlier IIS support
+//REQUIRES TESTING:          if (strstr($toolfilename,'.exe')) $load_params = str_replace('"','',$load_params);
+
+          if ($debug=='ON') $messageStack->add_session('COMMAND: '.OS_DELIM.$toolfilename . ' ' . $load_params.OS_DELIM, 'caution');
+
+          $resultcodes=exec(OS_DELIM . $toolfilename . $load_params . OS_DELIM, $output, $load_results );
+          exec("exit(0)");
           #parse the value that comes back from the script
           list($strA, $strB) = split ('[|]', $resultcodes);
           if ($debug=='ON') $messageStack->add_session("valueA: " . $strA,'error');
@@ -298,9 +313,11 @@
       case 'deleteconfirm':
         if (strstr($_GET['file'], '..')) zen_redirect(zen_href_link(FILENAME_BACKUP_MYSQL));
 
-        zen_remove(DIR_FS_BACKUP . '/' . $_GET['file']);
+        $zremove_error = zen_remove(DIR_FS_BACKUP . '/' . $_GET['file']);
+        // backwards compatibility:
+        if (isset($zen_remove_error) && $zen_remove_error == true) $zremove_error = $zen_remove_error;
 
-        if (!$zen_remove_error) {
+        if (!$zremove_error) {
           $messageStack->add_session(SUCCESS_BACKUP_DELETED, 'success');
 
           zen_redirect(zen_href_link(FILENAME_BACKUP_MYSQL));
@@ -436,7 +453,7 @@
                 <td class="smallText" colspan="3"><?php echo TEXT_BACKUP_DIRECTORY . ' ' . DIR_FS_BACKUP; ?></td>
                 <td align="right" class="smallText">
                     <?php if ( ($action != 'backup') && (isset($dir)) && !get_cfg_var('safe_mode') && $dir_ok == true ) {
-                             echo '<a href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'action=backup'.(($debug=='ON')?'&debug=ON':'')) . '">' .
+                             echo '<a href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'action=backup'.(($debug=='ON')?'&debug=ON':'')) . (($tables_to_export!='')?'&tables='.str_replace(' ',',',$tables_to_export):'') . '">' .
                                    zen_image_button('button_backup.gif', IMAGE_BACKUP) . '</a>&nbsp;&nbsp;';
                           }
                           if ( ($action != 'restorelocal') && isset($dir) ) {
@@ -463,7 +480,7 @@
     case 'backup':
       $heading[] = array('text' => '<strong>' . TEXT_INFO_HEADING_NEW_BACKUP . '</strong>');
 
-      $contents = array('form' => zen_draw_form('backup', FILENAME_BACKUP_MYSQL, 'action=backupnow'.(($debug=='ON')?'&debug=ON':'')));
+      $contents = array('form' => zen_draw_form('backup', FILENAME_BACKUP_MYSQL, 'action=backupnow'.(($debug=='ON')?'&debug=ON':''). (($tables_to_export!='')?'&tables='.str_replace(' ',',',$tables_to_export):'')));
       $contents[] = array('text' => TEXT_INFO_NEW_BACKUP);
 
       $contents[] = array('text' => '<br />' . zen_draw_radio_field('compress', 'no', (!@file_exists(LOCAL_EXE_GZIP) && !$compress_override ? true : false)) . ' ' . TEXT_INFO_USE_NO_COMPRESSION);
@@ -480,7 +497,7 @@
       }
 
       // display backup button
-      $contents[] = array('align' => 'center', 'text' => '<br />' . zen_image_submit('button_backup.gif', IMAGE_BACKUP) . '&nbsp;<a href="' . zen_href_link(FILENAME_BACKUP_MYSQL,(($debug=='ON')?'debug=ON':'')) . '">' . zen_image_button('button_cancel.gif', IMAGE_CANCEL) . '</a>');
+      $contents[] = array('align' => 'center', 'text' => '<br />' . zen_image_submit('button_backup.gif', IMAGE_BACKUP) . '&nbsp;<a href="' . zen_href_link(FILENAME_BACKUP_MYSQL,(($debug=='ON')?'debug=ON':'')) . (($tables_to_export!='')?'&tables='.str_replace(' ',',',$tables_to_export):''). '">' . zen_image_button('button_cancel.gif', IMAGE_CANCEL) . '</a>');
       break;
     case 'restore':
       $heading[] = array('text' => '<strong>' . $buInfo->date . '</strong>');

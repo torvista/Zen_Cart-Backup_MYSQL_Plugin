@@ -1,5 +1,5 @@
-Add-On: BACKUP_MYSQL Admin Tool v1.2.0.10a
-Designed for: Zen Cart v1.2.x series and 1.3.0
+Add-On: BACKUP_MYSQL Admin Tool v1.3
+Designed for: Zen Cart v1.2.x and 1.3.x series
 Created by: DrByte
 
 Donations:  Please support Zen Cart!  paypal@zen-cart.com  - Thank you!
@@ -82,3 +82,4 @@ Nov 10/05 - Now accommodates path-names containing spaces (Windows hosts)
 Nov 12/05 - Updated to default to typical binary names if none found -- attempted safe-mode workaround
 Dec 30/05 - Updated to allow more overrides in compression options, to detect failures due to Win2003 limitations, etc
 Jan 10/06 - Small typo fixed related to open_basedir detection
+Apr 28/07 - Updated contrib to new version number: 1.3 -- auto-handles lock-tables limitations and various bugfixes
