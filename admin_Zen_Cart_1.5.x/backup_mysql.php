@@ -17,7 +17,7 @@
 // | to obtain it through the world-wide-web, please send a note to       |
 // | license@zen-cart.com so we can mail you a copy immediately.          |
 // +----------------------------------------------------------------------+
-// $Id: backup_mysql.php revised 2014-07-08  $
+// $Id: backup_mysql.php revised 2015-06-25  $
 //
 
   define('OS_DELIM', '');
@@ -48,7 +48,6 @@
   }
 // check to see if "exec()" is disabled in PHP -- if so, won't be able to use this tool.
   $exec_disabled = false;
-  $proc_open_disabled = false;
   $php_disabled_functions = @ini_get("disable_functions");
   if ($php_disabled_functions != '') {
     if ($debug=='ON') $messageStack->add('PHP-Disabled-functions: ' . $php_disabled_functions,'error');
@@ -56,78 +55,47 @@
       $messageStack->add(ERROR_EXEC_DISABLED, 'error');
       $exec_disabled = true;
     }
-    if (in_array('proc_open', preg_split('/,/', str_replace(' ', '', $php_disabled_functions)))) {
-      $proc_open_disabled = true;
-    }
   }
 
-// platform independent check for mysql and mysqldump
-  $mysql_exe = false;
-  $mysqldump_exe = false;
-  if(!$proc_open_disabled) {
-    if(!function_exists('command_path')) {
-      function command_path($command) {
-        global $debug, $messageStack;
-        $findCommand = (strtoupper(substr(PHP_OS, 0, 3)) == 'WIN') ? 'where' : 'which';
-        if ($debug=='ON') $messageStack->add_session('Attempting to use "' . "$findCommand $command" . '" to determine executable location.','caution');
-        $check = proc_open(
-          "$findCommand $command",
-          array(
-            0 => array('pipe', 'r'), // STDIN
-            1 => array('pipe', 'w'), // STOUT
-            2 => array('pipe', 'w'), // STERR
-          ),
-          $pipes
-        );
-        if($check !== false) {
-          $stout = stream_get_contents($pipes[1]);
-          fclose($pipes[1]);
-          fclose($pipes[2]);
-          proc_close($check);
 
-          return ($stout != '' ? trim($stout) : false);
-        }
-        return false;
-      }
-    }
-
-    $mysql_exe = command_path('mysql');
-    $mysqldump_exe = command_path('mysqldump');
-  }
-
-// If not found in the system path, manually check the paths defined in
-// LOCAL_EXE_MYSQL and LOCAL_EXE_MYSQL_DUMP. These are defined in the file
-// "/admin/includes/languages/backup_mysql.php" and can be overridden in the URL
-// by specifying &tool=/path/to/utilname, depending on server support.
+// Note that LOCAL_EXE_MYSQL and LOCAL_EXE_MYSQL_DUMP are defined in the /admin/includes/languages/backup_mysql.php file
+// These can occasionally be overridden in the URL by specifying &tool=/path/to/foo/bar/plus/utilname, depending on server support
 // Do not change them here ... edit the LANGUAGES file instead.
 // the following lines check to be sure that they've been entered correctly in the language file
-  $pathsearch=array(str_replace('mysql','',LOCAL_EXE_MYSQL).'/',str_replace('mysql.exe','',LOCAL_EXE_MYSQL).'/','/usr/bin/','/usr/local/bin/','/usr/local/mysql/bin/','c:/mysql/bin/','d:/mysql/bin/','e:/mysql/bin/', 'c:/apache2triad/mysql/bin/', 'd:/apache2triad/mysql/bin/', 'e:/apache2triad/mysql/bin/', 'c:/server/mysql/bin/', '\'c:/Program Files/MySQL/MySQL Server 5.0/bin/\'', '\'d:\\Program Files\\MySQL\\MySQL Server 5.0\\bin\\\'', '\'c:/Program Files/MySQL/MySQL Server 4.1/bin/\'');
+  $pathsearch=array(str_replace('mysql','',LOCAL_EXE_MYSQL).'/',str_replace('mysql.exe','',LOCAL_EXE_MYSQL).'/','/usr/bin/','/usr/local/bin/','/usr/local/mysql/bin/','c:/mysql/bin/','d:/mysql/bin/','e:/mysql/bin/', 'c:/server/mysql/bin/', '\'c:/Program Files/MySQL/MySQL Server 5.0/bin/\'', '\'d:\\Program Files\\MySQL\\MySQL Server 5.0\\bin\\\'', '\'c:/Program Files/MySQL/MySQL Server 5.1/bin/\'');
   $pathsearch=array_merge($pathsearch,explode(':',$open_basedir));
-  if(isset($_GET['tool']) && $_GET['tool'] != '') array_unshift(str_replace(array('mysql.exe', 'mysql'), '', $_GET['tool']));
-
+  $mysql_exe = 'unknown';
+  $mysqldump_exe = 'unknown';
   foreach($pathsearch as $path){
-    if ($mysql_exe !== false && $mysqldump_exe !== false) break;
+//    $path = str_replace('\\','/',$path); // convert backslashes
     $path = str_replace('//','/',$path); // convert double slashes to singles
     $path = str_replace("'","",$path); // remove ' marks if any
     $path = (substr($path,-1)!='/' && substr($path,-1)!='\\') ? $path . '/' : $path; // add a '/' to the end if missing
 
-    if ($mysql_exe === false) {
+    if ($mysql_exe == 'unknown') {
       if (@file_exists($path.'mysql'))     $mysql_exe = $path.'mysql';
       if (@file_exists($path.'mysql.exe')) $mysql_exe = $path.'mysql.exe';
     }
-    if ($mysqldump_exe === false) {
+    if ($mysqldump_exe == 'unknown') {
       if (@file_exists($path.'mysqldump'))     $mysqldump_exe = $path.'mysqldump';
       if (@file_exists($path.'mysqldump.exe')) $mysqldump_exe = $path.'mysqldump.exe';
     }
     if ($debug=='ON') $messageStack->add_session('Checking Path: '.$path.'<br />','caution');
+    if ($mysql_exe != 'unknown' && $mysqldump_exe != 'unknown') break;
   }
 
-  if ($mysqldump_exe === false){
+  if (!$mysqldump_exe){
     $messageStack->add_session('WARNING: "mysqldump" binary not found. Backups may not work.<br />Please set full path to MYSQLDUMP binary in langauges/backup_mysql.php','error');
+    $mysqldump_exe = ((@file_exists($mysqldump_exe) ? $mysqldump_exe : 'mysqldump' ) );
+  }
+  if (!$mysql_exe){
+    $messageStack->add_session('WARNING: "mysql" binary not found. Restores may not work.<br />Please set full path to MYSQL binary in langauges/backup_mysql.php','error');
+    $mysql_exe =     ((@file_exists($mysql_exe) ? $mysql_exe : 'mysql' ) );
+  }
+  if ($mysql_exe == 'unknown') {
     $mysql_exe = 'mysql';
   }
-  if ($mysql_exe === false){
-    $messageStack->add_session('WARNING: "mysql" binary not found. Restores may not work.<br />Please set full path to MYSQL binary in langauges/backup_mysql.php','error');
+  if ($mysqldump_exe == 'unknown') {
     $mysqldump_exe = 'mysqldump';
   }
 
@@ -152,9 +120,9 @@
 
         $backup_file = 'db_' . DB_DATABASE . '-' . ($tables_to_export != '' ? 'limited-' : '' ) . date('YmdHis') . '.sql';
 
-        $dump_params .= ' --host=\'' . DB_SERVER . '\'';
-        $dump_params .= ' --user=\'' . DB_SERVER_USERNAME . '\'';
-        $dump_params .= ' --password=\'' . DB_SERVER_PASSWORD . '\'';
+        $dump_params .= ' "--host=' . DB_SERVER . '"';
+        $dump_params .= ' "--user=' . DB_SERVER_USERNAME . '"';
+        $dump_params .= ' "--password=' . DB_SERVER_PASSWORD . '"';
         $dump_params .= ' --opt';   //"optimized" -- turns on all "fast" and optimized export methods
         $dump_params .= ' --complete-insert';  // undo optimization slightly and do "complete inserts"--lists all column names for benefit of restore of diff systems
         if ($skip_locks_requested) {
@@ -164,7 +132,7 @@
 //        $dump_params .= ' --skip-quote-names';
 //        $dump_params .= ' --force';  // ignore SQL errors if they occur
 //        $dump_params .= ' --compatible=postgresql'; // other options are: ,mysql323, mysql40
-        $dump_params .= ' --result-file=\'' . DIR_FS_BACKUP . $backup_file . '\'';
+        $dump_params .= ' "--result-file=' . DIR_FS_BACKUP . $backup_file . '"';
         $dump_params .= ' ' . DB_DATABASE;
 
         // if using the "--tables" parameter, this should be the last parameter, and tables should be space-delimited
@@ -172,15 +140,17 @@
         $dump_params .= (($tables_to_export=='') ? '' : ' --tables ' . $tables_to_export);
         $dump_params .= " 2>&1";
 
+        $toolfilename = (isset($_GET['tool']) && $_GET['tool'] != '') ? $_GET['tool'] : $mysqldump_exe;
+
         // remove " marks in parameters for friendlier IIS support
 //REQUIRES TESTING:        if (strstr($toolfilename,'.exe')) $dump_params = str_replace('"','',$dump_params);
 
-        if ($debug=='ON') $messageStack->add_session('COMMAND: '.OS_DELIM.$mysqldump_exe . ' ' . $dump_params.OS_DELIM, 'caution');
+        if ($debug=='ON') $messageStack->add_session('COMMAND: '.OS_DELIM.$toolfilename . ' ' . $dump_params.OS_DELIM, 'caution');
 
 
-        $resultcodes = @exec(OS_DELIM . $mysqldump_exe . $dump_params . OS_DELIM, $output, $dump_results );
+        $resultcodes = @exec(OS_DELIM . $toolfilename . $dump_params . OS_DELIM, $output, $dump_results );
         @exec("exit(0)");
-        if ($dump_results == -1) $messageStack->add_session(FAILURE_BACKUP_FAILED_CHECK_PERMISSIONS . '<br />The command being run is: ' . $mysqldump_exe . str_replace('--password='.DB_SERVER_PASSWORD,'--password=*****', str_replace('2>&1','',$dump_params)), 'error');
+        if ($dump_results == -1) $messageStack->add_session(FAILURE_BACKUP_FAILED_CHECK_PERMISSIONS . '<br />The command being run is: ' . $toolfilename . str_replace('--password='.DB_SERVER_PASSWORD,'--password=*****', str_replace('2>&1','',$dump_params)), 'error');
         if ($debug=='ON' || (zen_not_null($dump_results) && $dump_results!='0')) $messageStack->add_session('Result code: '.$dump_results, 'caution');
 
         #parse the value that comes back from the script
@@ -210,17 +180,8 @@
               $backup_file .= '.gz';
               break;
             case 'zip':
-              if(class_exists('ZipArchive')) {
-                $archive = new ZipArchive();
-                if($archive->open(DIR_FS_BACKUP . $backup_file . '.zip', ZipArchive::CREATE) === TRUE) {
-                  $archive->addFile(DIR_FS_BACKUP . $backup_file, $backup_file);
-                  $archive->close();
-                }
-              }
-              else {
-                @exec(LOCAL_EXE_ZIP . ' -j ' . DIR_FS_BACKUP . $backup_file . '.zip ' . DIR_FS_BACKUP . $backup_file);
-              }
-              if (file_exists(DIR_FS_BACKUP . $backup_file) && file_exists(DIR_FS_BACKUP . $backup_file . '.zip')) unlink(DIR_FS_BACKUP . $backup_file);
+              @exec(LOCAL_EXE_ZIP . ' -j ' . DIR_FS_BACKUP . $backup_file . '.zip ' . DIR_FS_BACKUP . $backup_file);
+              if (file_exists(DIR_FS_BACKUP . $backup_file) && file_exists(DIR_FS_BACKUP . $backup_file . 'zip')) unlink(DIR_FS_BACKUP . $backup_file);
               $backup_file .= '.zip';
           }
       if (preg_match('/MSIE/', $_SERVER['HTTP_USER_AGENT'])) {
@@ -244,25 +205,16 @@
           unlink(DIR_FS_BACKUP . $backup_file);
 
           exit;
-        } else if (file_exists(DIR_FS_BACKUP . $backup_file)) {
-          switch ($_POST['compress']) {
+        } else {
+          switch ($_POST['compress'] && file_exists(DIR_FS_BACKUP . $backup_file)) {
             case 'gzip':
               @exec(LOCAL_EXE_GZIP . ' ' . DIR_FS_BACKUP . $backup_file);
               if (file_exists(DIR_FS_BACKUP . $backup_file)) @exec('gzip ' . DIR_FS_BACKUP . $backup_file);
               break;
             case 'zip':
-              if(class_exists('ZipArchive')) {
-                $archive = new ZipArchive();
-                if($archive->open(DIR_FS_BACKUP . $backup_file . '.zip', ZipArchive::CREATE) === TRUE) {
-                  $archive->addFile(DIR_FS_BACKUP . $backup_file, $backup_file);
-                  $archive->close();
-                }
-              }
-              else {
-                @exec(LOCAL_EXE_ZIP . ' -j ' . DIR_FS_BACKUP . $backup_file . '.zip ' . DIR_FS_BACKUP . $backup_file);
-              }
+              @exec(LOCAL_EXE_ZIP . ' -j ' . DIR_FS_BACKUP . $backup_file . '.zip ' . DIR_FS_BACKUP . $backup_file);
+              if (file_exists(DIR_FS_BACKUP . $backup_file) && file_exists(DIR_FS_BACKUP . $backup_file . 'zip')) unlink(DIR_FS_BACKUP . $backup_file);
           }
-          if (file_exists(DIR_FS_BACKUP . $backup_file) && file_exists(DIR_FS_BACKUP . $backup_file . '.' . $_POST['compress'])) unlink(DIR_FS_BACKUP . $backup_file);
         }
         zen_redirect(zen_href_link(FILENAME_BACKUP_MYSQL));
         break;
@@ -276,11 +228,11 @@
             $extension = substr($specified_restore_file, -3);
 
             //determine file format and unzip if needed
-            $remove_raw = false;
             if ( ($extension == 'sql') || ($extension == '.gz') || ($extension == 'zip') ) {
               switch ($extension) {
                 case 'sql':
                   $restore_from = $restore_file;
+                  $remove_raw = false;
                   break;
                 case '.gz':
                   $restore_from = substr($restore_file, 0, -3);
@@ -289,18 +241,8 @@
                   break;
                 case 'zip':
                   $restore_from = substr($restore_file, 0, -4);
-                  if(class_exists('ZipArchive')) {
-                    $archive = new ZipArchive();
-                    if($archive->open($restore_file) === TRUE) {
-                      $archive->extractTo(DIR_FS_BACKUP, array(substr($specified_restore_file, 0, -4)));
-                      $archive->close();
-                      $remove_raw = true;
-                    }
-                  }
-                  else {
-                    exec(LOCAL_EXE_UNZIP . ' ' . $restore_file . ' -d ' . DIR_FS_BACKUP);
-                    $remove_raw = true;
-                  }
+                  exec(LOCAL_EXE_UNZIP . ' ' . $restore_file . ' -d ' . DIR_FS_BACKUP);
+                  $remove_raw = true;
               }
             }
         } elseif ($action == 'restorelocalnow') {
@@ -310,23 +252,24 @@
         }
 
         //Restore using "mysql"
-        $load_params  = ' --database=\'' . DB_DATABASE . '\'';
-        $load_params .= ' --host=\'' . DB_SERVER . '\'';
-        $load_params .= ' --user=\'' . DB_SERVER_USERNAME . '\'';
-        $load_params .= ((DB_SERVER_PASSWORD =='') ? '' : ' --password=\'' . DB_SERVER_PASSWORD . '\'');
+        $load_params  = ' "--database=' . DB_DATABASE . '"';
+        $load_params .= ' "--host=' . DB_SERVER . '"';
+        $load_params .= ' "--user=' . DB_SERVER_USERNAME . '"';
+        $load_params .= ((DB_SERVER_PASSWORD =='') ? '' : ' "--password=' . DB_SERVER_PASSWORD . '"');
         $load_params .= ' ' . DB_DATABASE; // this needs to be the 2nd-last parameter
-        $load_params .= ' < \'' . $restore_from . '\''; // this needs to be the LAST parameter
+        $load_params .= ' < "' . $restore_from . '"'; // this needs to be the LAST parameter
         $load_params .= " 2>&1";
         //DEBUG echo $mysql_exe . ' ' . $load_params;
 
         if (file_exists($restore_from) && $specified_restore_file != '') {
+          $toolfilename = (isset($_GET['tool']) && $_GET['tool'] != '') ? $_GET['tool'] : $mysql_exe;
 
           // remove " marks in parameters for friendlier IIS support
 //REQUIRES TESTING:          if (strstr($toolfilename,'.exe')) $load_params = str_replace('"','',$load_params);
 
-          if ($debug=='ON') $messageStack->add_session('COMMAND: '.OS_DELIM.$mysql_exe . ' ' . $load_params.OS_DELIM, 'caution');
+          if ($debug=='ON') $messageStack->add_session('COMMAND: '.OS_DELIM.$toolfilename . ' ' . $load_params.OS_DELIM, 'caution');
 
-          $resultcodes=exec(OS_DELIM . $mysql_exe . $load_params . OS_DELIM, $output, $load_results );
+          $resultcodes=exec(OS_DELIM . $toolfilename . $load_params . OS_DELIM, $output, $load_results );
           exec("exit(0)");
           #parse the value that comes back from the script
           list($strA, $strB) = preg_split ('/[|]/', $resultcodes);
@@ -337,7 +280,7 @@
           if ($load_results == '0') {
             // store the last-restore-date, if successful
             $db->Execute("delete from " . TABLE_CONFIGURATION . " where configuration_key = 'DB_LAST_RESTORE'");
-            $db->Execute("insert into " . TABLE_CONFIGURATION . " values ('', 'Last Database Restore', 'DB_LAST_RESTORE', '" . $specified_restore_file . "', 'Last database restore file', '6', '', '', now(), '', '')");
+            $db->Execute("insert into " . TABLE_CONFIGURATION . " (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, date_added) values ('Last Database Restore', 'DB_LAST_RESTORE', '" . $specified_restore_file . "', 'Last database restore file', 6, now())");
             $messageStack->add_session('<a href="' . ((ENABLE_SSL_ADMIN == 'true') ? DIR_WS_HTTPS_ADMIN : DIR_WS_ADMIN) . 'backups/' . $specified_restore_file . '">' . SUCCESS_DATABASE_RESTORED . '</a>', 'success');
             } elseif ($load_results == '127') {
             $messageStack->add_session(FAILURE_DATABASE_NOT_RESTORED_UTIL_NOT_FOUND, 'error');
@@ -348,7 +291,6 @@
           $messageStack->add_session(sprintf(FAILURE_DATABASE_NOT_RESTORED_FILE_NOT_FOUND, '[' . $restore_from .']'), 'error');
           } // endif file_exists
 
-        if($remove_raw) unlink($restore_from);
         zen_redirect(zen_href_link(FILENAME_BACKUP_MYSQL));
         break;
       case 'download':
@@ -543,7 +485,7 @@
 
       $contents[] = array('text' => '<br />' . zen_draw_radio_field('compress', 'no', (!@file_exists(LOCAL_EXE_GZIP) && !$compress_override ? true : false)) . ' ' . TEXT_INFO_USE_NO_COMPRESSION);
       if (@file_exists(LOCAL_EXE_GZIP) || $compress_override) $contents[] = array('text' => '<br />' . zen_draw_radio_field('compress', 'gzip', true) . ' ' . TEXT_INFO_USE_GZIP);
-      if (class_exists('ZipArchive') || @file_exists(LOCAL_EXE_ZIP)) $contents[] = array('text' => zen_draw_radio_field('compress', 'zip',(!@file_exists(LOCAL_EXE_GZIP) ? true : false)) . ' ' . TEXT_INFO_USE_ZIP);
+      if (@file_exists(LOCAL_EXE_ZIP)) $contents[] = array('text' => zen_draw_radio_field('compress', 'zip',(!@file_exists(LOCAL_EXE_GZIP) ? true : false)) . ' ' . TEXT_INFO_USE_ZIP);
       $contents[] = array('text' => '<br />' . zen_draw_radio_field('skiplocks', 'yes', false) . ' ' . TEXT_INFO_SKIP_LOCKS);
 
 

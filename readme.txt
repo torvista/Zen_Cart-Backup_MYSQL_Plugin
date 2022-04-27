@@ -1,5 +1,5 @@
 Add-On: BACKUP_MYSQL Admin Tool 
-Designed for: Zen Cart 1.3.x and 1.5.x series
+Designed for: Zen Cart v1.3.x and 1.5.x series
 Created by: DrByte
 
 Donations:  Please support Zen Cart!  paypal@zen-cart.com  - Thank you!
@@ -89,7 +89,5 @@ Jan 04/08 - Updated to 1.3.5, compression improvements
 Jun 2010 - Updated to v1.4 - includes PHP 5.3 fixes and smarter detection of whether exec() is disabled
 Dec 9/2011 - Updated to v1.5 - with additional file to register page for 1.5.0
 July 3/2012 - Updated to better detect and avoid display of files that aren't related to backups
-
-
-July 8/2014 - Updated to utilize ZipArchive if present, use OS independent path detection for mysql / mysqldump, and support additional characters in passwords.
+June 12/2015 - Updated avoid inserting null value for integer field when restoring data.
 
