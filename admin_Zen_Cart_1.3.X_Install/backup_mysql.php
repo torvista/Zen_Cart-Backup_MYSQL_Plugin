@@ -17,7 +17,7 @@
 // | to obtain it through the world-wide-web, please send a note to       |
 // | license@zen-cart.com so we can mail you a copy immediately.          |
 // +----------------------------------------------------------------------+
-// $Id: backup_mysql.php 154 2010-06-09 13:57:26Z drbyte $
+// $Id: backup_mysql.php revised 2012-07-07  $
 //
 
   define('OS_DELIM', '');
@@ -149,10 +149,10 @@
 
 
         $resultcodes = @exec(OS_DELIM . $toolfilename . $dump_params . OS_DELIM, $output, $dump_results );
-        @exec("exit(0)"); 
+        @exec("exit(0)");
         if ($dump_results == -1) $messageStack->add_session(FAILURE_BACKUP_FAILED_CHECK_PERMISSIONS . '<br />The command being run is: ' . $toolfilename . str_replace('--password='.DB_SERVER_PASSWORD,'--password=*****', str_replace('2>&1','',$dump_params)), 'error');
         if ($debug=='ON' || (zen_not_null($dump_results) && $dump_results!='0')) $messageStack->add_session('Result code: '.$dump_results, 'caution');
-   
+
         #parse the value that comes back from the script
         if (zen_not_null($resultcodes)) list($strA, $strB) = preg_split ('/[|]/', $resultcodes);
         if ($debug=='ON') $messageStack->add_session("valueA: " . $strA,'error');
@@ -270,7 +270,7 @@
           if ($debug=='ON') $messageStack->add_session('COMMAND: '.OS_DELIM.$toolfilename . ' ' . $load_params.OS_DELIM, 'caution');
 
           $resultcodes=exec(OS_DELIM . $toolfilename . $load_params . OS_DELIM, $output, $load_results );
-          exec("exit(0)"); 
+          exec("exit(0)");
           #parse the value that comes back from the script
           list($strA, $strB) = preg_split ('/[|]/', $resultcodes);
           if ($debug=='ON') $messageStack->add_session("valueA: " . $strA,'error');
@@ -381,7 +381,7 @@
             <td class="pageHeading"><?php echo HEADING_TITLE; ?></td>
             <td class="pageHeading" align="right"><?php echo zen_draw_separator('pixel_trans.gif', HEADING_IMAGE_WIDTH, HEADING_IMAGE_HEIGHT); ?></td>
           </tr>
-<?php if (ENABLE_SSL_ADMIN != 'true') {  // display security warning about downloads if not SSL ?>
+<?php if (substr(HTTP_SERVER, 0, 5) != 'https') {  // display security warning about downloads if not SSL ?>
           <tr>
             <td class="main"><?php echo WARNING_NOT_SECURE_FOR_DOWNLOADS; ?></td>
             <td class="main" align="right"><?php echo zen_draw_separator('pixel_trans.gif', HEADING_IMAGE_WIDTH, HEADING_IMAGE_HEIGHT); ?></td>
@@ -405,16 +405,14 @@
     $contents = array();
     while ($file = $dir->read()) {
       if (!is_dir(DIR_FS_BACKUP . $file)) {
-        if ($file != '.empty' && $file != 'empty.txt' && $file != 'index.php' && $file != 'index.htm' && $file != 'index.html') {
+        if (substr($file,0,1) != '.' && !in_array($file, array('empty.txt', 'index.php', 'index.htm', 'index.html'))) {
           $contents[] = $file;
         }
       }
     }
     sort($contents);
-
     for ($i=0, $n=sizeof($contents); $i<$n; $i++) {
       $entry = $contents[$i];
-
       $check = 0;
 
       if ((!isset($_GET['file']) || (isset($_GET['file']) && ($_GET['file'] == $entry))) && !isset($buInfo) && ($action != 'backup') && ($action != 'restorelocal')) {
