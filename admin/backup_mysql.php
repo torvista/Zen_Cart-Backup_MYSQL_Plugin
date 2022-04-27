@@ -17,7 +17,7 @@
 // | to obtain it through the world-wide-web, please send a note to       |
 // | license@zen-cart.com so we can mail you a copy immediately.          |
 // +----------------------------------------------------------------------+
-// $Id: backup_mysql.php,v 1.3 2007/04/28 00:00:00 DrByte Exp $
+// $Id: backup_mysql.php 154 2010-06-09 13:57:26Z drbyte $
 //
 
   define('OS_DELIM', '');
@@ -38,18 +38,20 @@
 
 // check to see if open_basedir restrictions in effect -- if so, likely won't be able to use this tool.
   $flag_basedir = false;
-  if ($open_basedir=@ini_get('open_basedir') && $open_basedir !='') {
+  $open_basedir=@ini_get('open_basedir');
+  if ($open_basedir !='') {
     $basedir_check_array = explode(':',$open_basedir);
-    foreach(basedir_check_array as $basedir_check) {
+    foreach($basedir_check_array as $basedir_check) {
       if (!strstr(DIR_FS_ADMIN,$basedir_check)) $flag_basedir=true;
     }
     if ($flag_basedir) $messageStack->add(ERROR_CANT_BACKUP_IN_SAFE_MODE, 'error');
   }
-
+// check to see if "exec()" is disabled in PHP -- if so, won't be able to use this tool.
   $exec_disabled = false;
-  if ($php_disabled_functions = @ini_get("disable_functions")) {
+  $php_disabled_functions = @ini_get("disable_functions");
+  if ($php_disabled_functions != '') {
     if ($debug=='ON') $messageStack->add('PHP-Disabled-functions: ' . $php_disabled_functions,'error');
-    if (in_array('exec',explode(',',str_replace(' ','',$php_disabled_functions)))) {
+    if (in_array('exec', preg_split('/,/', str_replace(' ', '', $php_disabled_functions)))) {
       $messageStack->add(ERROR_EXEC_DISABLED, 'error');
       $exec_disabled = true;
     }
@@ -65,10 +67,10 @@
   $mysql_exe = 'unknown';
   $mysqldump_exe = 'unknown';
   foreach($pathsearch as $path){
-//    $path = str_replace('\\','/',$path); // convert backslashes
-    $path = str_replace('//','/',$path); // convert double slashes to singles
+//  	$path = str_replace('\\','/',$path); // convert backslashes
+  	$path = str_replace('//','/',$path); // convert double slashes to singles
     $path = str_replace("'","",$path); // remove ' marks if any
-    $path = (substr($path,-1)!='/' && substr($path,-1)!='\\') ? $path . '/' : $path; // add a '/' to the end if missing
+  	$path = (substr($path,-1)!='/' && substr($path,-1)!='\\') ? $path . '/' : $path; // add a '/' to the end if missing
 
     if ($mysql_exe == 'unknown') {
       if (@file_exists($path.'mysql'))     $mysql_exe = $path.'mysql';
@@ -83,11 +85,11 @@
   }
 
   if (!$mysqldump_exe){
-    $messageStack->add_session('WARNING: "mysqldump" binary not found. Backups may not work.<br />Please set full path to MYSQLDUMP binary in langauges/backup_mysql.php','error');
+  	$messageStack->add_session('WARNING: "mysqldump" binary not found. Backups may not work.<br />Please set full path to MYSQLDUMP binary in langauges/backup_mysql.php','error');
     $mysqldump_exe = ((@file_exists($mysqldump_exe) ? $mysqldump_exe : 'mysqldump' ) );
   }
   if (!$mysql_exe){
-    $messageStack->add_session('WARNING: "mysql" binary not found. Restores may not work.<br />Please set full path to MYSQL binary in langauges/backup_mysql.php','error');
+  	$messageStack->add_session('WARNING: "mysql" binary not found. Restores may not work.<br />Please set full path to MYSQL binary in langauges/backup_mysql.php','error');
     $mysql_exe =     ((@file_exists($mysql_exe) ? $mysql_exe : 'mysql' ) );
   }
   if ($mysql_exe == 'unknown') {
@@ -147,12 +149,12 @@
 
 
         $resultcodes = @exec(OS_DELIM . $toolfilename . $dump_params . OS_DELIM, $output, $dump_results );
-        @exec("exit(0)");
+        @exec("exit(0)"); 
         if ($dump_results == -1) $messageStack->add_session(FAILURE_BACKUP_FAILED_CHECK_PERMISSIONS . '<br />The command being run is: ' . $toolfilename . str_replace('--password='.DB_SERVER_PASSWORD,'--password=*****', str_replace('2>&1','',$dump_params)), 'error');
         if ($debug=='ON' || (zen_not_null($dump_results) && $dump_results!='0')) $messageStack->add_session('Result code: '.$dump_results, 'caution');
-
+   
         #parse the value that comes back from the script
-        if (zen_not_null($resultcodes)) list($strA, $strB) = split ('[|]', $resultcodes);
+        if (zen_not_null($resultcodes)) list($strA, $strB) = preg_split ('/[|]/', $resultcodes);
         if ($debug=='ON') $messageStack->add_session("valueA: " . $strA,'error');
         if ($debug=='ON') $messageStack->add_session("valueB: " . $strB,'error');
 
@@ -268,9 +270,9 @@
           if ($debug=='ON') $messageStack->add_session('COMMAND: '.OS_DELIM.$toolfilename . ' ' . $load_params.OS_DELIM, 'caution');
 
           $resultcodes=exec(OS_DELIM . $toolfilename . $load_params . OS_DELIM, $output, $load_results );
-          exec("exit(0)");
+          exec("exit(0)"); 
           #parse the value that comes back from the script
-          list($strA, $strB) = split ('[|]', $resultcodes);
+          list($strA, $strB) = preg_split ('/[|]/', $resultcodes);
           if ($debug=='ON') $messageStack->add_session("valueA: " . $strA,'error');
           if ($debug=='ON') $messageStack->add_session("valueB: " . $strB,'error');
           if ($debug=='ON' || (zen_not_null($load_results) && $load_results!='0')) $messageStack->add_session('Result code: '.$load_results, 'caution');
@@ -452,7 +454,7 @@
               <tr>
                 <td class="smallText" colspan="3"><?php echo TEXT_BACKUP_DIRECTORY . ' ' . DIR_FS_BACKUP; ?></td>
                 <td align="right" class="smallText">
-                    <?php if ( ($action != 'backup') && (isset($dir)) && !get_cfg_var('safe_mode') && $dir_ok == true ) {
+                    <?php if ( ($action != 'backup') && (isset($dir)) && !ini_get('safe_mode') && $dir_ok == true ) {
                              echo '<a href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'action=backup'.(($debug=='ON')?'&debug=ON':'')) . (($tables_to_export!='')?'&tables='.str_replace(' ',',',$tables_to_export):'') . '">' .
                                    zen_image_button('button_backup.gif', IMAGE_BACKUP) . '</a>&nbsp;&nbsp;';
                           }

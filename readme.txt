@@ -1,4 +1,4 @@
-Add-On: BACKUP_MYSQL Admin Tool v1.3
+Add-On: BACKUP_MYSQL Admin Tool 
 Designed for: Zen Cart v1.2.x and 1.3.x series
 Created by: DrByte
 
@@ -20,9 +20,10 @@ USE:  To use, just log into the admin area, click on "Tools",
 and click on "Database Backup-MySQL".
 
 Note that to perform backups, your /admin/backups folder must be 
-writable by the webserver userID. This is usually best accomlished 
+writable by the webserver userID. This is usually best accomplished 
 by CHMOD 777 on the /admin/backups folder, either by shell console 
-or by FTP program. CHMOD777 means read/write/execute permissions.
+or by FTP program. CHMOD777 means read/write/execute permissions for everyone.
+Some servers don't permit use of 777 (blank screen or 500 error), in which case 755 will be required.
 
 You can also download backup files from this window by clicking on 
 the small down-arrow icon to the left of the listed backup files, 
@@ -82,4 +83,9 @@ Nov 10/05 - Now accommodates path-names containing spaces (Windows hosts)
 Nov 12/05 - Updated to default to typical binary names if none found -- attempted safe-mode workaround
 Dec 30/05 - Updated to allow more overrides in compression options, to detect failures due to Win2003 limitations, etc
 Jan 10/06 - Small typo fixed related to open_basedir detection
+Feb 28/06 - Completed support for individual table export (&tables=xxx,xxxx,xxxx) and added more tweaks for IIS support
 Apr 28/07 - Updated contrib to new version number: 1.3 -- auto-handles lock-tables limitations and various bugfixes
+Jan 04/08 - Updated to 1.3.5, compression improvements
+Jun 2010 - Updated to v1.4 - includes PHP 5.3 fixes and smarter detection of whether exec() is disabled
+
+

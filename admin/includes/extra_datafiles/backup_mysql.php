@@ -3,7 +3,7 @@
 // +----------------------------------------------------------------------+
 // |zen-cart Open Source E-commerce                                       |
 // +----------------------------------------------------------------------+
-// | Copyright (c) 2003 The zen-cart developers                           |
+// | Copyright (c) 2003-2010 The zen-cart developers                           |
 // |                                                                      |
 // | http://www.zen-cart.com/index.php                                    |
 // |                                                                      |
@@ -17,10 +17,13 @@
 // | to obtain it through the world-wide-web, please send a note to       |
 // | license@zen-cart.com so we can mail you a copy immediately.          |
 // +----------------------------------------------------------------------+
-// $Id: backup_mysql.php,v 1.3 2007/04/28 00:00:00 DrByte Exp $
+//  $Id: backup_mysql.php 154 2010-06-09 13:57:26Z drbyte $
 //
 
 define('FILENAME_BACKUP_MYSQL', 'backup_mysql');
 define('BOX_TOOLS_BACKUP_MYSQL', 'Database Backup - MySQL');
 
-?>
+
+// Set this to 'true' if the zip options aren't appearing while doing a backup, and you are certain that gzip support exists on your server
+define('COMPRESS_OVERRIDE','false');
+//define('COMPRESS_OVERRIDE','true');
