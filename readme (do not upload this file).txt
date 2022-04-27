@@ -1,22 +1,21 @@
 Add-On: BACKUP_MYSQL Admin Tool 
-Designed for: Zen Cart v1.3.x and 1.5.x series
+Designed for: Zen Cart v1.5.x series
 Created by: DrByte
 
 Donations:  Please support Zen Cart!  paypal@zen-cart.com  - Thank you!
 ===========================================================
 
 NOTES:  This add-on was created for a couple reasons:
-- much faster than the old backup tool
+- much faster than a php-scripted backup tool
 - supports backups of "huge" databases
-- demonstrate how to create your own admin-related plug-in tool
 
 ===========================================================
 
-INSTALLATION:  Upload all files from the "admin" folder of this ZIP as-is to your server, retaining folder structures.
+INSTALLATION:  Upload all files from the YOUR-ADMIN-FOLDER folder of this ZIP as-is to your store's "admin" folder (whatever name it is), retaining the subdirectories included here.
 
 ===========================================================
 
-USE:  To use, just log into the admin area, click on "Tools", 
+USE:  To use, just log into your admin area, click on "Tools", 
 and click on "Database Backup-MySQL".
 
 Note that to perform backups, your /admin/backups folder must be 
@@ -29,10 +28,6 @@ You can also download backup files from this window by clicking on
 the small down-arrow icon to the left of the listed backup files, 
 or you may download directly during the backup process by clicking 
 on the checkbox.
-NOTE: If you intend to download files, we STRONGLY recommend you do 
-it only via a secure SSL / HTTPS: connection. Otherwise you put all 
-your customers' data at risk of somebody tracking your download.
-
 
 We hope you enjoy the speed of backups using this plug-in tool!
 
@@ -60,9 +55,9 @@ for standard paths on Windows configurations, so give it a try as-is first.
 Otherwise, edit the settings in the language file, and it should be fine.  
 (do NOT put a trailing / in the end of the define).
 
-In many cases, Windows 2003 servers will prevent the use of exec() commands 
-by virtue of the fact that Windows 2003 restricts the Internet Guest Account from
-being allowed to run cmd.exe.  To override this, you would need to alter the
+In many cases, Windows servers will prevent the use of exec() commands 
+by virtue of the fact that Windows restricts the Internet Guest Account from
+being allowed to run cmd.exe. To override this, you would need to alter the
 security permissions on cmd.exe and grant the Internet Guest Account read/execute
 as "Special Access" permissions.  NOTE: This may be a security risk to your server,
 so it's best to consult with your security expert before making such a change.
@@ -90,4 +85,4 @@ Jun 2010 - Updated to v1.4 - includes PHP 5.3 fixes and smarter detection of whe
 Dec 9/2011 - Updated to v1.5 - with additional file to register page for 1.5.0
 July 3/2012 - Updated to better detect and avoid display of files that aren't related to backups
 June 12/2015 - Updated avoid inserting null value for integer field when restoring data.
-
+Dec 2018 - Dropped support for ZC v1.3.x (it still works, but the menu option doesn't get installed)
