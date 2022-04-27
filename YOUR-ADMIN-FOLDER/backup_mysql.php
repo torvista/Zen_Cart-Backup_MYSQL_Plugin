@@ -1,5 +1,4 @@
 <?php
-//
 // +----------------------------------------------------------------------+
 // |zen-cart Open Source E-commerce                                       |
 // +----------------------------------------------------------------------+
@@ -17,9 +16,8 @@
 // | to obtain it through the world-wide-web, please send a note to       |
 // | license@zen-cart.com so we can mail you a copy immediately.          |
 // +----------------------------------------------------------------------+
-// $Id: backup_mysql.php revised 2015-06-25  $
+// $Id: backup_mysql.php revised 2020-07-19  $
 //
-
   define('OS_DELIM', '');
 
   require('includes/application_top.php');
@@ -272,7 +270,7 @@
           $resultcodes=exec(OS_DELIM . $toolfilename . $load_params . OS_DELIM, $output, $load_results );
           exec("exit(0)");
           #parse the value that comes back from the script
-          list($strA, $strB) = preg_split ('/[|]/', $resultcodes);
+          if (zen_not_null($resultcodes)) list($strA, $strB) = preg_split ('/[|]/', $resultcodes);
           if ($debug=='ON') $messageStack->add_session("valueA: " . $strA,'error');
           if ($debug=='ON') $messageStack->add_session("valueB: " . $strB,'error');
           if ($debug=='ON' || (zen_not_null($load_results) && $load_results!='0')) $messageStack->add_session('Result code: '.$load_results, 'caution');

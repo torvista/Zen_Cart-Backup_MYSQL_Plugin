@@ -1,5 +1,4 @@
 <?php
-//
 // +----------------------------------------------------------------------+
 // |zen-cart Open Source E-commerce                                       |
 // +----------------------------------------------------------------------+
@@ -17,7 +16,7 @@
 // | to obtain it through the world-wide-web, please send a note to       |
 // | license@zen-cart.com so we can mail you a copy immediately.          |
 // +----------------------------------------------------------------------+
-// $Id: backup_mysql.php 154 2010-06-09 13:57:26Z drbyte $
+// $Id: backup_mysql.php 2020-07-19 drbyte $
 //
 
 // define the locations of the mysql utilities.  Typical location is in '/usr/bin/' ... but not on Windows servers.
@@ -71,5 +70,8 @@ define('FAILURE_DATABASE_NOT_SAVED_UTIL_NOT_FOUND', 'ERROR: Could not locate the
 define('FAILURE_DATABASE_NOT_RESTORED', 'Failure: The database may NOT have been restored properly. Please check it carefully.');
 define('FAILURE_DATABASE_NOT_RESTORED_FILE_NOT_FOUND', 'Failure: The database was NOT restored.  ERROR: FILE NOT FOUND: %s');
 define('FAILURE_DATABASE_NOT_RESTORED_UTIL_NOT_FOUND', 'ERROR: Could not locate the MYSQL restore utility. RESTORE FAILED.');
-define('FAILURE_BACKUP_FAILED_CHECK_PERMISSIONS','The backup failed because there was an error starting the backup program (mysqldump or mysqldump.exe).<br />If running on Windows 2003 server, you may need to alter permissions on cmd.exe to allow Special Access to the Internet Guest Account to read/execute.<br />You should talk to your webhost about why exec() commands are failing when attempting to run the mysqldump binary/program.');
+define('FAILURE_BACKUP_FAILED_CHECK_PERMISSIONS','The backup failed because there was an error starting the backup program (mysqldump or mysqldump.exe).<br />If running on Windows Server, you may need to alter permissions on cmd.exe to allow Special Access to the Internet Guest Account to read/execute.<br />You should talk to your webhost about why exec() commands are failing when attempting to run the mysqldump binary/program.');
 
+if (!defined('ICON_FILE_DOWNLOAD')) define('ICON_FILE_DOWNLOAD', 'Download');
+if (!defined('IMAGE_RESTORE')) define('IMAGE_RESTORE', 'Restore');
+if (!defined('IMAGE_BACKUP')) define('IMAGE_BACKUP', 'Backup');
