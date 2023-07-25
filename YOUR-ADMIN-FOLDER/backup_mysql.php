@@ -152,7 +152,9 @@
         if ($debug=='ON' || (zen_not_null($dump_results) && $dump_results!='0')) $messageStack->add_session('Result code: '.$dump_results, 'caution');
 
         #parse the value that comes back from the script
-        if (zen_not_null($resultcodes)) list($strA, $strB) = preg_split ('/[|]/', $resultcodes);
+        if (zen_not_null($resultcodes)) {
+            [$strA, $strB] = array_pad(explode('|', $resultcodes, 2), 2, null);
+        }
         if ($debug=='ON') $messageStack->add_session("valueA: " . $strA,'error');
         if ($debug=='ON') $messageStack->add_session("valueB: " . $strB,'error');
 
