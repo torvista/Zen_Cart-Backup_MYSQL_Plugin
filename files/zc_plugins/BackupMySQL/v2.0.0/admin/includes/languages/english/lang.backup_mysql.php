@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * part of Backup MySQL plugin
  * @copyright Copyright 2024 Zen Cart Development Team
@@ -32,6 +34,7 @@ $define = [
     'TABLE_HEADING_FILE_DATE' => 'Date',
     'TABLE_HEADING_FILE_SIZE' => 'Size',
     'TABLE_HEADING_TITLE' => 'Title',
+    'TEXT_ADD_SUFFIX' => 'Add an optional suffix to the filename (ascii characters only):',
     'TEXT_BACKUP_DIRECTORY' => 'Backup Directory:',
     'TEXT_DELETE_INTRO' => 'Are you sure you want to delete this backup?',
     'TEXT_FORGET' => '(forget)',

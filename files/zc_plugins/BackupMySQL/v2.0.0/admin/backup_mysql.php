@@ -31,11 +31,13 @@ $compress_override = (isset($_GET['comp']) && $_GET['comp'] > 0) || COMPRESS_OVE
 $debug = isset($_GET['debug']) && ($_GET['debug'] == 'ON' || (int)$_GET['debug'] === 1);
 $skip_locks_requested = isset($_REQUEST['skiplocks']) && $_REQUEST['skiplocks'] == 'yes';
 $ssl_on = str_starts_with(HTTP_SERVER, 'https');
+$gzip_enabled = function_exists('ob_gzhandler') && ini_get('zlib.output_compression');
+$zip_enabled = class_exists('ZipArchive');
 
 // check to see if open_basedir restrictions in effect -- if so, likely won't be able to use this tool.
 $flag_basedir = false;
 $open_basedir = @ini_get('open_basedir');
-if ($open_basedir != '') {
+if ($open_basedir !== '') {
     $basedir_check_array = explode(':', $open_basedir);
     foreach ($basedir_check_array as $basedir_check) {
         if (!strstr(DIR_FS_ADMIN, $basedir_check)) {
@@ -89,7 +91,7 @@ foreach ($pathsearch as $path) {
     $path = str_replace("'", "", $path); // remove ' marks if any
     $path = (!str_ends_with($path, '/') && !str_ends_with($path, '\\')) ? $path . '/' : $path; // add a '/' to the end if missing
 
-    if ($mysql_exe == 'unknown') {
+    if ($mysql_exe === 'unknown') {
         if (@file_exists($path . 'mysql')) {
             $mysql_exe = $path . 'mysql';
         }
@@ -97,7 +99,7 @@ foreach ($pathsearch as $path) {
             $mysql_exe = $path . 'mysql.exe';
         }
     }
-    if ($mysqldump_exe == 'unknown') {
+    if ($mysqldump_exe === 'unknown') {
         if (@file_exists($path . 'mysqldump')) {
             $mysqldump_exe = $path . 'mysqldump';
         }
@@ -108,7 +110,7 @@ foreach ($pathsearch as $path) {
     if ($debug) {
         $messageStack->add_session('Checking Path: ' . $path . '<br>', 'caution');
     }
-    if ($mysql_exe != 'unknown' && $mysqldump_exe != 'unknown') {
+    if ($mysql_exe !== 'unknown' && $mysqldump_exe !== 'unknown') {
         break;
     }
 }
@@ -152,9 +154,16 @@ if (zen_not_null($action)) {
             break;
 
         case 'backupnow':
-            zen_set_time_limit(250);  // not sure if this is needed anymore?
+            //zen_set_time_limit(250);  // not needed?
+            if (isset($_POST['suffix']) && $_POST['suffix'] !== '') {
+                $suffix = '_' . zen_output_string_protected($_POST['suffix']); //sanitise input
+                $suffix = preg_replace('/\s+/', '_', $suffix, -1); //swap whitespace for an underscore
+                $suffix = preg_replace('/[^-a-zA-Z0-9_]+/', '', $suffix); //strip to simple ascii only
+            } else {
+                $suffix = '';
+            }
 
-            $backup_file = 'db_' . DB_DATABASE . '-' . ($tables_to_export != '' ? 'limited-' : '') . date('YmdHis') . '.sql';
+            $backup_file = 'db_' . DB_DATABASE . '-' . ($tables_to_export !== '' ? 'limited-' : '') . date('YmdHis') . $suffix . '.sql';
 
             $dump_params .= ' "--host=' . DB_SERVER . '"';
             $dump_params .= ' "--user=' . DB_SERVER_USERNAME . '"';
@@ -185,16 +194,17 @@ if (zen_not_null($action)) {
                 $messageStack->add_session('COMMAND: ' . OS_DELIM . $toolfilename . ' ' . $dump_params . OS_DELIM, 'caution');
             }
 
-            $resultcodes = @exec(OS_DELIM . $toolfilename . $dump_params . OS_DELIM, $output, $dump_results);
-            @exec("exit(0)");
-            if ($dump_results == -1) {
+            unset($output);
+            $resultcodes = exec(OS_DELIM . $toolfilename . $dump_params . OS_DELIM, $output, $dump_results);
+            exec("exit(0)");
+            if ($dump_results === -1) {
                 $messageStack->add_session(FAILURE_BACKUP_FAILED_CHECK_PERMISSIONS . '<br>The command being run is: ' . $toolfilename . str_replace('--password=' . DB_SERVER_PASSWORD, '--password=*****', str_replace('2>&1', '', $dump_params)), 'error');
             }
             if ($debug || (zen_not_null($dump_results) && $dump_results != '0')) {
                 $messageStack->add_session('Result code: ' . $dump_results, 'caution');
             }
 
-            #parse the value that comes back from the script
+            // parse the value that comes back from the script
             if (zen_not_null($resultcodes)) {
                 [$strA, $strB] = array_pad(explode('|', $resultcodes, 2), 2, null);
             }
@@ -578,6 +588,10 @@ if (is_dir(DIR_FS_BACKUP)) {
                     if (!$ssl_on) {
                         $contents[] = ['text' => '<span class="errorText">* ' . TEXT_INFO_BEST_THROUGH_HTTPS . ' * </span>'];
                     }
+                            // add suffix to backup filename
+                            $contents[] = [
+                                'text' => '<label>' . TEXT_ADD_SUFFIX . '</label><br>' . zen_draw_input_field('suffix', '', 'size="31" maxlength="30"')
+                            ];
 
                     // Display Backup and Cancel buttons
                     $contents[] = [
