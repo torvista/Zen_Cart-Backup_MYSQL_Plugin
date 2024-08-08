@@ -72,12 +72,13 @@ define('COMPRESS_OVERRIDE',false);
 //define('COMPRESS_OVERRIDE',true);
 1. Fix detection and use of compression options.
 1. Fix delimiters for Windows/Unix with extended Ascii characters in passwords.
+1. review use of zen_remove
 1. Allow adding a suffix to the filename to identify specific backups.
 1. More stuff I've done in own version that I've forgotten.
 
 ## Changelog
 2024 08 torvista  
-formatting, use short echo tags, remove unused td of download icon, remove unused row hover effect, remove br tags from infobox, add th tags to table.
+formatting, use short echo tags, remove unused td of download icon, remove unused row hover effect, remove br tags from infobox, add th tags to table, simplifications (use str_starts_with, str_ends with etc., use of $dir_ok, $exec_disabled, unnecessary clauses), disable check for return value of zen_remove
 2024 07 torvista: Converted to encapsulated plugin:
 move Last Restored and buttons outside file list table  
 remove/replace obsolete html4 tags, br / to br, replaced nested table structure with divs  
