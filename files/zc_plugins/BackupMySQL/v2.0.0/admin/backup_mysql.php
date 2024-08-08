@@ -146,7 +146,7 @@ if (zen_not_null($action)) {
     switch ($action) {
 
         case 'forget':
-            $db->Execute("delete from " . TABLE_CONFIGURATION . " where configuration_key = 'DB_LAST_RESTORE'");
+            $db->Execute("DELETE FROM " . TABLE_CONFIGURATION . " WHERE configuration_key = 'BACKUP_MYSQL_LAST_RESTORE'");
             $messageStack->add_session(SUCCESS_LAST_RESTORE_CLEARED, 'success');
             zen_redirect(zen_href_link(FILENAME_BACKUP_MYSQL));
             break;
@@ -350,9 +350,12 @@ if (zen_not_null($action)) {
 
                 if ($load_results == '0') {
                     // store the last-restore-date, if successful
-                    $db->Execute("delete from " . TABLE_CONFIGURATION . " where configuration_key = 'DB_LAST_RESTORE'");
+                    //remove old constant
+                    $db->Execute('DELETE FROM ' . TABLE_CONFIGURATION . ' WHERE configuration_key = "DB_LAST_RESTORE"');
                     $db->Execute(
-                        "insert into " . TABLE_CONFIGURATION . " (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, date_added) values ('Last Database Restore', 'DB_LAST_RESTORE', '" . $specified_restore_file . "', 'Last database restore file', 6, now())"
+                        "INSERT INTO " . TABLE_CONFIGURATION . "
+                        (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, date_added) VALUES
+                        ('Last Database Restore', 'BACKUP_MYSQL_LAST_RESTORE', '" . $specified_restore_file . "', 'Last database restore file', 6, now())"
                     );
                     $messageStack->add_session('<a href="' . ((ENABLE_SSL_ADMIN == 'true') ? DIR_WS_HTTPS_ADMIN : DIR_WS_ADMIN) . 'backups/' . $specified_restore_file . '">' . SUCCESS_DATABASE_RESTORED . '</a>', 'success');
                 } elseif ($load_results == '127') {
@@ -534,8 +537,8 @@ if (is_dir(DIR_FS_BACKUP)) {
                 <?= TEXT_BACKUP_DIRECTORY . ' ' . DIR_FS_BACKUP ?>
                 <br>
                 <?php
-                if (defined('DB_LAST_RESTORE')) {
-                    echo TEXT_LAST_RESTORATION . ' ' . DB_LAST_RESTORE . ' <a href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'action=forget') . '">' . TEXT_FORGET . '</a>';
+                if (defined('BACKUP_MYSQL_LAST_RESTORE')) {
+                    echo TEXT_LAST_RESTORATION . ' ' . BACKUP_MYSQL_LAST_RESTORE . ' <a href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'action=forget') . '">' . TEXT_FORGET . '</a>';
                 }
                 ?>
             </div>
