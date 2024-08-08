@@ -76,10 +76,11 @@ Review this
 1. Allow adding a suffix to the filename to identify specific backups.
 1. Show SSL warnings only when necessary
 1. Add stuff I've done in my own version that I don't remember.
+1. review $_GET['returnto'] (not used)
 
 ## Changelog
 2024 08 torvista  
-formatting, use short echo tags, remove unused td of download icon, remove unused row hover effect, remove br tags from infobox, add th tags to table, simplifications (use str_starts_with, str_ends with etc., use of $dir_ok, $exec_disabled, unnecessary clauses), disable check for return value of zen_remove, use CSS buttons, use Kb for size, simplify use of $debug
+formatting, use short echo tags, remove unused td of download icon, remove unused row hover effect, remove br tags from infobox, add th tags to table, simplifications (use str_starts_with, str_ends with etc., use of $dir_ok, $exec_disabled, unnecessary clauses), disable check for return value of zen_remove, use CSS buttons, use Kb for size, simplify use of $debug, strict comparisons
 
 Converted to encapsulated plugin.  
 move Last Restored and buttons outside file list table  

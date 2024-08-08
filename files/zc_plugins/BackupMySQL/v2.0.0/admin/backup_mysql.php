@@ -21,6 +21,7 @@ require('includes/application_top.php');
 $dump_params = '';
 $tables_to_export = (isset($_GET['tables']) && $_GET['tables'] != '') ? str_replace(',', ' ', $_GET['tables']) : '';
 $redirect = (isset($_GET['returnto']) && $_GET['returnto'] != '') ? $_GET['returnto'] : '';
+
 $resultcodes = '';
 $_POST['compress'] = (isset($_REQUEST['compress'])) ? $_REQUEST['compress'] : false;
 $strA = '';
@@ -28,7 +29,7 @@ $strB = '';
 $compress_override = (isset($_GET['comp']) && $_GET['comp'] > 0) || COMPRESS_OVERRIDE == 'true';
 
 $debug = isset($_GET['debug']) && ($_GET['debug'] == 'ON' || (int)$_GET['debug'] === 1);
-$skip_locks_requested = (isset($_REQUEST['skiplocks']) && $_REQUEST['skiplocks'] == 'yes');
+$skip_locks_requested = isset($_REQUEST['skiplocks']) && $_REQUEST['skiplocks'] == 'yes';
 
 // check to see if open_basedir restrictions in effect -- if so, likely won't be able to use this tool.
 $flag_basedir = false;
@@ -44,6 +45,7 @@ if ($open_basedir != '') {
         $messageStack->add(ERROR_CANT_BACKUP_IN_SAFE_MODE, 'error');
     }
 }
+
 // check to see if "exec()" is disabled in PHP -- if so, won't be able to use this tool.
 $exec_disabled = false;
 $php_disabled_functions = @ini_get("disable_functions");
@@ -76,8 +78,10 @@ $pathsearch = [
     '\'c:/Program Files/MySQL/MySQL Server 5.1/bin/\''
 ];
 $pathsearch = array_merge($pathsearch, explode(':', $open_basedir));
+
 $mysql_exe = 'unknown';
 $mysqldump_exe = 'unknown';
+
 foreach ($pathsearch as $path) {
 //    $path = str_replace('\\','/',$path); // convert backslashes
     $path = str_replace('//', '/', $path); // convert double slashes to singles
@@ -125,9 +129,6 @@ if ($mysqldump_exe == 'unknown') {
 
 $mysql_exe = '"' . $mysql_exe . '"';
 $mysqldump_exe = '"' . $mysqldump_exe . '"';
-if ($debug) {
-    $messageStack->add_session('<br>', 'caution');
-}
 if ($debug) {
     $messageStack->add_session('COMMAND FILES SELECTED:', 'caution');
 }
@@ -368,16 +369,13 @@ if (zen_not_null($action)) {
         case 'download':
             $extension = substr($_GET['file'], -3);
 
-            if (($extension == 'zip') || ($extension == '.gz') || ($extension == 'sql')) {
+            if (($extension === 'zip') || ($extension === '.gz') || ($extension === 'sql')) {
                 if ($fp = fopen(DIR_FS_BACKUP . $_GET['file'], 'rb')) {
                     $buffer = fread($fp, filesize(DIR_FS_BACKUP . $_GET['file']));
                     fclose($fp);
-
                     header('Content-type: application/x-octet-stream');
                     header('Content-disposition: attachment; filename=' . $_GET['file']);
-
                     echo $buffer;
-
                     exit;
                 }
             } else {
@@ -491,7 +489,7 @@ if (is_dir(DIR_FS_BACKUP)) {
                         $buInfo = new objectInfo($file_array);
                     }
 
-                if (isset($buInfo) && is_object($buInfo) && ($entry == $buInfo->file)) {
+                if (isset($buInfo) && is_object($buInfo) && ($entry === $buInfo->file)) {
                 $onclick_link = 'file=' . $buInfo->file . '&action=restore';
                 ?>
                 <tr id="defaultSelected" class="dataTableRowSelected">
@@ -524,7 +522,7 @@ if (is_dir(DIR_FS_BACKUP)) {
 
             <div class="right">
                 <?php
-                if (($action != 'backup') && !ini_get('safe_mode') && $dir_ok) {
+                if (($action !== 'backup') && !ini_get('safe_mode') && $dir_ok) {
                     echo '<a class="btn btn-primary" role="button" href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'action=backup' . ($debug ? '&debug=ON' : '')) . (($tables_to_export != '') ? '&tables=' . str_replace(' ', ',', $tables_to_export) : '') . '">' . IMAGE_BACKUP . '</a>&nbsp;&nbsp;';
                 }
                 if (($action != 'restorelocal') && isset($dir)) {
