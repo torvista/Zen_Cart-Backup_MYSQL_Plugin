@@ -4,7 +4,7 @@
  * @copyright Copyright 2024 Zen Cart Development Team
  * @license http://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
  * @author Dr.Byte
- * @version $Id: torvista 2024 Aug 07 $
+ * @version $Id: torvista 2024 Aug 08 $
  */
 
 /** for phpStorm
@@ -56,10 +56,10 @@ if ($php_disabled_functions != '') {
     }
 }
 
-// Note that LOCAL_EXE_MYSQL and LOCAL_EXE_MYSQL_DUMP are defined in the /admin/includes/languages/backup_mysql.php file
+// Note that LOCAL_EXE_MYSQL and LOCAL_EXE_MYSQL_DUMP are defined in /admin/includes/extra_datafiles/backup_mysql.php
 // These can occasionally be overridden in the URL by specifying &tool=/path/to/foo/bar/plus/utilname, depending on server support
-// Do not change them here ... edit the LANGUAGES file instead.
-// the following lines check to be sure that they've been entered correctly in the language file
+// Do not change them here ... edit the file instead.
+// The following lines check to be sure that they've been entered correctly in the file
 $pathsearch = [
     str_replace('mysql', '', LOCAL_EXE_MYSQL) . '/',
     str_replace('mysql.exe', '', LOCAL_EXE_MYSQL) . '/',
@@ -417,16 +417,13 @@ if (is_dir(DIR_FS_BACKUP)) {
 }
 ?>
 <!doctype html >
-<html <?php
-echo HTML_PARAMS ?>>
+<html <?= HTML_PARAMS ?>>
 <head>
-    <?php
-    require DIR_WS_INCLUDES . 'admin_html_head.php'; ?>
+    <?php require DIR_WS_INCLUDES . 'admin_html_head.php'; ?>
 </head>
 <body>
 <!-- header //-->
-<?php
-require DIR_WS_INCLUDES . 'header.php'; ?>
+<?php require DIR_WS_INCLUDES . 'header.php'; ?>
 <!-- header_eof //-->
 <!-- body //-->
 <div class="container-fluid">
@@ -434,24 +431,17 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
     <div class="row">
         <!-- body_text //-->
         <?php
-        if (!str_starts_with(HTTP_SERVER, 'https')) {  // display security warning about downloads if not SSL ?>
-            <?php
-            echo WARNING_NOT_SECURE_FOR_DOWNLOADS; ?>
-        <?php
+        if (!str_starts_with(HTTP_SERVER, 'https')) {  // display security warning about downloads if not SSL
+            echo WARNING_NOT_SECURE_FOR_DOWNLOADS;
         } ?>
         <div class="col-xs-12 col-sm-12 col-md-9 col-lg-9 configurationColumnLeft">
             <table class="table table-hover">
                 <thead>
                 <tr class="dataTableHeadingRow">
-                    <td class="dataTableHeadingContent"><?php
-                        echo TABLE_HEADING_TITLE; ?></td>
-                    <td class="dataTableHeadingContent center"><?php
-                        echo TABLE_HEADING_FILE_DATE; ?></td>
-                    <td class="dataTableHeadingContent right"><?php
-                        echo TABLE_HEADING_FILE_SIZE; ?></td>
-                    <td class="dataTableHeadingContent right"><?php
-                        echo TABLE_HEADING_ACTION; ?>&nbsp;
-                    </td>
+                    <th class="dataTableHeadingContent"><?= TABLE_HEADING_TITLE ?></th>
+                    <th class="dataTableHeadingContent center"><?= TABLE_HEADING_FILE_DATE ?></th>
+                    <th class="dataTableHeadingContent right"><?= TABLE_HEADING_FILE_SIZE ?></th>
+                    <th class="dataTableHeadingContent right"><?= TABLE_HEADING_ACTION ?>&nbsp;</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -491,26 +481,22 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
                         $buInfo = new objectInfo($file_array);
                     }
 
-                    if (isset($buInfo) && is_object($buInfo) && ($entry == $buInfo->file)) {
-                        echo '              <tr id="defaultSelected" class="dataTableRowSelected" onmouseover="rowOverEffect(this)" onmouseout="rowOutEffect(this)">' . "\n";
-                        $onclick_link = 'file=' . $buInfo->file . '&action=restore';
+                if (isset($buInfo) && is_object($buInfo) && ($entry == $buInfo->file)) {
+                $onclick_link = 'file=' . $buInfo->file . '&action=restore';
+                ?>
+                <tr id="defaultSelected" class="dataTableRowSelected">
+                    <?php
                     } else {
-                        echo '              <tr class="dataTableRow" onmouseover="rowOverEffect(this)" onmouseout="rowOutEffect(this)">' . "\n";
-                        $onclick_link = 'file=' . $entry;
+                    $onclick_link = 'file=' . $entry; ?>
+                <tr class="dataTableRow">
+                    <?php
                     }
                     ?>
-                    <!--                 <td class="dataTableContent" onclick="document.location.href='<?php
-                    echo zen_href_link(FILENAME_BACKUP_MYSQL, $onclick_link); ?>'"><?php
-                    echo '<a href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'action=download&file=' . $entry) . '">' . zen_image(DIR_WS_ICONS . 'file_download.gif', ICON_FILE_DOWNLOAD) . '</a>&nbsp;' . $entry; ?></td> -->
-                    <td class="dataTableContent" onClick="document.location.href='<?php
-                    echo zen_href_link(FILENAME_BACKUP_MYSQL, $onclick_link); ?>'"><?php
-                        echo '<a href="' . ((ENABLE_SSL_ADMIN == 'true') ? DIR_WS_HTTPS_ADMIN : DIR_WS_ADMIN) . 'backups/' . $entry . '">' . zen_image(DIR_WS_ICONS . 'file_download.gif', ICON_FILE_DOWNLOAD) . '</a>&nbsp;' . $entry; ?></td>
-                    <td class="dataTableContent center" onClick="document.location.href='<?php
-                    echo zen_href_link(FILENAME_BACKUP_MYSQL, $onclick_link); ?>'"><?php
-                        echo date(PHP_DATE_TIME_FORMAT, filemtime(DIR_FS_BACKUP . $entry)); ?></td>
-                    <td class="dataTableContent right" onClick="document.location.href='<?php
-                    echo zen_href_link(FILENAME_BACKUP_MYSQL, $onclick_link); ?>'"><?php
-                        echo number_format(filesize(DIR_FS_BACKUP . $entry)); ?> bytes
+                    <td class="dataTableContent" onClick="document.location.href='<?= zen_href_link(FILENAME_BACKUP_MYSQL, $onclick_link) ?>'">
+                        <?= '<a href="' . ((ENABLE_SSL_ADMIN == 'true') ? DIR_WS_HTTPS_ADMIN : DIR_WS_ADMIN) . 'backups/' . $entry . '">' . zen_image(DIR_WS_ICONS . 'file_download.gif', ICON_FILE_DOWNLOAD) . '</a>&nbsp;' . $entry ?></td>
+                    <td class="dataTableContent center" onClick="document.location.href='<?= zen_href_link(FILENAME_BACKUP_MYSQL, $onclick_link) ?>'">
+                        <?= date(PHP_DATE_TIME_FORMAT, filemtime(DIR_FS_BACKUP . $entry)) ?></td>
+                    <td class="dataTableContent right" onClick="document.location.href='<?= zen_href_link(FILENAME_BACKUP_MYSQL, $onclick_link) ?>'"><?= number_format(filesize(DIR_FS_BACKUP . $entry)) ?> bytes
                     </td>
                     <td class="dataTableContent right"><?php
                         if (isset($buInfo) && is_object($buInfo) && ($entry == $buInfo->file)) {
@@ -540,8 +526,7 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
                 } ?>
             </div>
             <div class="small">
-                <?php
-                echo TEXT_BACKUP_DIRECTORY . ' ' . DIR_FS_BACKUP; ?>
+                <?= TEXT_BACKUP_DIRECTORY . ' ' . DIR_FS_BACKUP ?>
                 <br>
                 <?php
                 if (defined('DB_LAST_RESTORE')) {
@@ -564,26 +549,26 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
                     $contents = ['form' => zen_draw_form('backup', FILENAME_BACKUP_MYSQL, 'action=backupnow' . (($debug == 'ON') ? '&debug=ON' : '') . (($tables_to_export != '') ? '&tables=' . str_replace(' ', ',', $tables_to_export) : ''))];
                     $contents[] = ['text' => TEXT_INFO_NEW_BACKUP];
 
-                    $contents[] = ['text' => '<br>' . zen_draw_radio_field('compress', 'no', (!@file_exists(LOCAL_EXE_GZIP) && !$compress_override ? true : false)) . ' ' . TEXT_INFO_USE_NO_COMPRESSION];
+                    $contents[] = ['text' => zen_draw_radio_field('compress', 'no', (!@file_exists(LOCAL_EXE_GZIP) && !$compress_override ? true : false)) . ' ' . TEXT_INFO_USE_NO_COMPRESSION];
                     if (@file_exists(LOCAL_EXE_GZIP) || $compress_override) {
-                        $contents[] = ['text' => '<br>' . zen_draw_radio_field('compress', 'gzip', true) . ' ' . TEXT_INFO_USE_GZIP];
+                        $contents[] = ['text' => zen_draw_radio_field('compress', 'gzip', true) . ' ' . TEXT_INFO_USE_GZIP];
                     }
                     if (@file_exists(LOCAL_EXE_ZIP)) {
                         $contents[] = ['text' => zen_draw_radio_field('compress', 'zip', (!@file_exists(LOCAL_EXE_GZIP) ? true : false)) . ' ' . TEXT_INFO_USE_ZIP];
                     }
-                    $contents[] = ['text' => '<br>' . zen_draw_radio_field('skiplocks', 'yes', false) . ' ' . TEXT_INFO_SKIP_LOCKS];
+                    $contents[] = ['text' => zen_draw_radio_field('skiplocks', 'yes', false) . ' ' . TEXT_INFO_SKIP_LOCKS];
 
                     // Download to file --- Should only be done if SSL is active, otherwise database is exposed as clear text
                     if ($dir_ok == true) {
-                        $contents[] = ['text' => '<br>' . zen_draw_checkbox_field('download', 'yes') . ' ' . TEXT_INFO_DOWNLOAD_ONLY . '*<br><span class="errorText">*' . TEXT_INFO_BEST_THROUGH_HTTPS . '</span>'];
+                        $contents[] = ['text' => zen_draw_checkbox_field('download', 'yes') . ' ' . TEXT_INFO_DOWNLOAD_ONLY . '*<br><span class="errorText">*' . TEXT_INFO_BEST_THROUGH_HTTPS . '</span>'];
                     } else {
-                        $contents[] = ['text' => '<br>' . zen_draw_radio_field('download', 'yes', true) . ' ' . TEXT_INFO_DOWNLOAD_ONLY . '*<br><span class="errorText">*' . TEXT_INFO_BEST_THROUGH_HTTPS . '</span>'];
+                        $contents[] = ['text' => zen_draw_radio_field('download', 'yes', true) . ' ' . TEXT_INFO_DOWNLOAD_ONLY . '*<br><span class="errorText">*' . TEXT_INFO_BEST_THROUGH_HTTPS . '</span>'];
                     }
 
                     // display backup button
                     $contents[] = [
                         'align' => 'center',
-                        'text' => '<br>' . zen_image_submit('button_backup.gif', IMAGE_BACKUP) . '&nbsp;<a href="' . zen_href_link(FILENAME_BACKUP_MYSQL, (($debug == 'ON') ? 'debug=ON' : '')) . (($tables_to_export != '') ? '&tables=' . str_replace(
+                        'text' =>  zen_image_submit('button_backup.gif', IMAGE_BACKUP) . '&nbsp;<a href="' . zen_href_link(FILENAME_BACKUP_MYSQL, (($debug == 'ON') ? 'debug=ON' : '')) . (($tables_to_export != '') ? '&tables=' . str_replace(
                                     ' ',
                                     ',',
                                     $tables_to_export
@@ -603,7 +588,7 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
                     ];
                     $contents[] = [
                         'align' => 'center',
-                        'text' => '<br><a href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'file=' . $buInfo->file . '&action=restorenow' . (($debug == 'ON') ? '&debug=ON' : '')) . '">' . zen_image_button('button_restore.gif', IMAGE_RESTORE) . '</a>&nbsp;<a href="' . zen_href_link(
+                        'text' => '<a href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'file=' . $buInfo->file . '&action=restorenow' . (($debug == 'ON') ? '&debug=ON' : '')) . '">' . zen_image_button('button_restore.gif', IMAGE_RESTORE) . '</a>&nbsp;<a href="' . zen_href_link(
                                 FILENAME_BACKUP_MYSQL,
                                 'file=' . $buInfo->file . (($debug == 'ON') ? '&debug=ON' : '')
                             ) . '">' . zen_image_button('button_cancel.gif', IMAGE_CANCEL) . '</a>'
@@ -615,7 +600,7 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
 
                     $contents = ['form' => zen_draw_form('restore', FILENAME_BACKUP_MYSQL, 'action=restorelocalnow' . (($debug == 'ON') ? '&debug=ON' : ''), 'post', 'enctype="multipart/form-data"')];
                     $contents[] = ['text' => TEXT_INFO_RESTORE_LOCAL . '<br><br>' . TEXT_INFO_BEST_THROUGH_HTTPS];
-                    $contents[] = ['text' => '<br>' . zen_draw_file_field('sql_file')];
+                    $contents[] = ['text' => zen_draw_file_field('sql_file')];
                     $contents[] = ['text' => TEXT_INFO_RESTORE_LOCAL_RAW_FILE];
                     $contents[] = ['align' => 'center', 'text' => '<br>' . zen_image_submit('button_restore.gif', IMAGE_RESTORE) . '&nbsp;<a href="' . zen_href_link(FILENAME_BACKUP_MYSQL, (($debug == 'ON') ? 'debug=ON' : '')) . '">' . zen_image_button('button_cancel.gif', IMAGE_CANCEL) . '</a>'];
                     break;
@@ -643,9 +628,9 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
                                 (($dir_ok == true && $exec_disabled == false) ? '<a href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'file=' . $buInfo->file . '&action=delete') . '">' .
                                     zen_image_button('button_delete.gif', IMAGE_DELETE) . '</a>' : '')
                         ];
-                        $contents[] = ['text' => '<br>' . TEXT_INFO_DATE . ' ' . $buInfo->date];
+                        $contents[] = ['text' => TEXT_INFO_DATE . ' ' . $buInfo->date];
                         $contents[] = ['text' => TEXT_INFO_SIZE . ' ' . $buInfo->size];
-                        $contents[] = ['text' => '<br>' . TEXT_INFO_COMPRESSION . ' ' . $buInfo->compression];
+                        $contents[] = ['text' => TEXT_INFO_COMPRESSION . ' ' . $buInfo->compression];
                     }
                     break;
             }

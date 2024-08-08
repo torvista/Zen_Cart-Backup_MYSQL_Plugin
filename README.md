@@ -20,22 +20,35 @@ for more information on such possibilities.
 Does not work on GoDaddy servers or other servers where the database is hosted on a different physical machine
 
 ## Installation
-1. Upload all files from /files/zc_plugins to your development site for testing before copying to your production server.
+1. Copy all the files from */files/zc_plugins/* to your development site for testing before copying to your production server.
 2. Admin->Modules->Plugin Manager->Select the plugin and Install it.
 
-Note that to perform backups, your /admin/backups folder must be 
+Note that to perform backups, your */ADMIN_FOLDER/backups* folder must be 
 writable by the webserver userID. This is usually best accomplished 
-by CHMOD 777 on the /admin/backups folder, either by shell console 
+by CHMOD 777 on the */ADMIN_FOLDER/backups* folder, either by shell console 
 or by FTP program. CHMOD777 means read/write/execute permissions for everyone.
 Some servers don't permit use of 777 (blank screen or 500 error), in which case 755 will be required.
 
 ## Use
 Admin->Tools->MySQL Database Backup-Restore
 
-You can also download backup files from this window by clicking on 
-the small down-arrow icon to the left of the listed backup files, 
-or you may download directly during the backup process by clicking 
-on the checkbox.
+You may download a backup file directly on creation (not saving it on the server) by selecting the appropriate checkbox prior to the backup.
+
+You can also download previous backup files from the list by clicking on the small down-arrow icon to the left of the file name.  
+However this will most likely require an edit to the */ADMIN_FOLDER/backups/.htaccess* file to allow this.
+
+Add this to the end of the .htaccess file:
+
+	# Backup MySQL: allow specific backup files:
+	<FilesMatch "(?i).*\.(gz?|sql|zip)$">
+	  <IfModule mod_authz_core.c>
+		Require all granted
+	</IfModule>
+	<IfModule !mod_authz_core.c>
+		Order Allow,Deny
+		Allow from all
+	</IfModule>
+	</FilesMatch>
 
 ## Info
 This tool looks for the mysql binary tools "mysql" and "mysqldump" to
@@ -63,7 +76,9 @@ define('COMPRESS_OVERRIDE',false);
 1. More stuff I've done in own version that I've forgotten.
 
 ## Changelog
-2024 07 Converted to encapsulated plugin:
+2024 08 torvista  
+formatting, use short echo tags, remove unused td of download icon, remove unused row hover effect, remove br tags from infobox, add th tags to table.
+2024 07 torvista: Converted to encapsulated plugin:
 move Last Restored and buttons outside file list table  
 remove/replace obsolete html4 tags, br / to br, replaced nested table structure with divs  
 use admin html_head  
