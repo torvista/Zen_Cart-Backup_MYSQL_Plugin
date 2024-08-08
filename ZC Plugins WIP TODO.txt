@@ -1,0 +1,18 @@
+TODO
+Sort out parsing of possible tool locations.
+
+admin\includes\extra_datafiles\backup_mysql.php
+review this
+// Set this to true if the zip options aren't appearing while doing a backup, and you are certain that gzip support exists on your server
+define('COMPRESS_OVERRIDE',false);
+//define('COMPRESS_OVERRIDE',true);
+
+
+Changelog
+move Last Restored and buttons outside file list table
+remove/replace obsolete html4 tags, br / to br, replaced nested table structure with divs
+use admin html_head
+(Null coalesce, short array syntax)
+Moved tool locations defines to extra_datafiles.
+Converted language file to 158 format, ordered constants
+Moved files to plugins structure
