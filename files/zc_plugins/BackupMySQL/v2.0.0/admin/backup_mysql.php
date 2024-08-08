@@ -30,6 +30,7 @@ $compress_override = (isset($_GET['comp']) && $_GET['comp'] > 0) || COMPRESS_OVE
 
 $debug = isset($_GET['debug']) && ($_GET['debug'] == 'ON' || (int)$_GET['debug'] === 1);
 $skip_locks_requested = isset($_REQUEST['skiplocks']) && $_REQUEST['skiplocks'] == 'yes';
+$ssl_on = str_starts_with(HTTP_SERVER, 'https');
 
 // check to see if open_basedir restrictions in effect -- if so, likely won't be able to use this tool.
 $flag_basedir = false;
@@ -434,7 +435,7 @@ if (is_dir(DIR_FS_BACKUP)) {
     <div class="row">
         <!-- body_text //-->
         <?php
-        if (!str_starts_with(HTTP_SERVER, 'https')) {  // display security warning about downloads if not SSL
+        if (!$ssl_on) {  // display security warning about downloads if not SSL
             echo WARNING_NOT_SECURE_FOR_DOWNLOADS;
         } ?>
         <div class="col-xs-12 col-sm-12 col-md-9 col-lg-9 configurationColumnLeft">
@@ -567,9 +568,12 @@ if (is_dir(DIR_FS_BACKUP)) {
 
                     // Download to file --- Should only be done if SSL is active, otherwise database is exposed as clear text
                     if ($dir_ok) {
-                        $contents[] = ['text' => zen_draw_checkbox_field('download', 'yes') . ' ' . TEXT_INFO_DOWNLOAD_ONLY . '*<br><span class="errorText">*' . TEXT_INFO_BEST_THROUGH_HTTPS . '</span>'];
+                        $contents[] = ['text' => zen_draw_checkbox_field('download', 'yes') . ' ' . TEXT_INFO_DOWNLOAD_ONLY];
                     } else {
-                        $contents[] = ['text' => zen_draw_radio_field('download', 'yes', true) . ' ' . TEXT_INFO_DOWNLOAD_ONLY . '*<br><span class="errorText">*' . TEXT_INFO_BEST_THROUGH_HTTPS . '</span>'];
+                        $contents[] = ['text' => zen_draw_radio_field('download', 'yes', true) . ' ' . TEXT_INFO_DOWNLOAD_ONLY];
+                    }
+                    if (!$ssl_on) {
+                        $contents[] = ['text' => '<span class="errorText">* ' . TEXT_INFO_BEST_THROUGH_HTTPS . ' * </span>'];
                     }
 
                     // Display Backup and Cancel buttons
@@ -608,7 +612,10 @@ if (is_dir(DIR_FS_BACKUP)) {
                     $heading[] = ['text' => '<strong>' . TEXT_INFO_HEADING_RESTORE_LOCAL . '</strong>'];
 
                     $contents = ['form' => zen_draw_form('restore', FILENAME_BACKUP_MYSQL, 'action=restorelocalnow' . ($debug ? '&debug=ON' : ''), 'post', 'enctype="multipart/form-data"')];
-                    $contents[] = ['text' => TEXT_INFO_RESTORE_LOCAL . '<br><br>' . TEXT_INFO_BEST_THROUGH_HTTPS];
+                    $contents[] = ['text' => TEXT_INFO_RESTORE_LOCAL];
+                    if (!$ssl_on) {
+                        $contents[] = ['text' => '<span class="errorText">* ' . TEXT_INFO_BEST_THROUGH_HTTPS . ' *</span>'];
+                    }
                     $contents[] = ['text' => zen_draw_file_field('sql_file')];
                     $contents[] = ['text' => TEXT_INFO_RESTORE_LOCAL_RAW_FILE];
 
