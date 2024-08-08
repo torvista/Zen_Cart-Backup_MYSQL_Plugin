@@ -65,27 +65,28 @@ NOTE: This may be a security risk to your server, so it's best to consult with y
 
 ## TODO
 1. Sort out parsing of possible tool locations.
-1. admin\includes\extra_datafiles\backup_mysql.php
-review this
-// Set this to true if the zip options aren't appearing while doing a backup, and you are certain that gzip support exists on your server
-define('COMPRESS_OVERRIDE',false);
-//define('COMPRESS_OVERRIDE',true);
 1. Fix detection and use of compression options.
+admin\includes\extra_datafiles\backup_mysql.php  
+Review this  
+
+		// Set this to true if the zip options aren't appearing while doing a backup, and you are certain that gzip support exists on your server  
+		define('COMPRESS_OVERRIDE',false);  
+		//define('COMPRESS_OVERRIDE',true);  
 1. Fix delimiters for Windows/Unix with extended Ascii characters in passwords.
-1. review use of zen_remove
 1. Allow adding a suffix to the filename to identify specific backups.
-1. More stuff I've done in own version that I've forgotten.
+1. Show SSL warnings only when necessary
+1. Add stuff I've done in my own version that I don't remember.
 
 ## Changelog
 2024 08 torvista  
-formatting, use short echo tags, remove unused td of download icon, remove unused row hover effect, remove br tags from infobox, add th tags to table, simplifications (use str_starts_with, str_ends with etc., use of $dir_ok, $exec_disabled, unnecessary clauses), disable check for return value of zen_remove
-2024 07 torvista: Converted to encapsulated plugin:
+formatting, use short echo tags, remove unused td of download icon, remove unused row hover effect, remove br tags from infobox, add th tags to table, simplifications (use str_starts_with, str_ends with etc., use of $dir_ok, $exec_disabled, unnecessary clauses), disable check for return value of zen_remove, use CSS buttons, use Kb for size, simplify use of $debug
+
+Converted to encapsulated plugin.  
 move Last Restored and buttons outside file list table  
-remove/replace obsolete html4 tags, br / to br, replaced nested table structure with divs  
+remove/replace obsolete html4 tags, br / to br, replaced nested table structure with divs, use null coalesce, short array syntax  
 use admin html_head  
-(Null coalesce, short array syntax)  
 Moved tool locations defines to extra_datafiles.  
-Converted language file to 158 format, ordered constants
+Converted language file to lang. format, alpha-sort constants
 
 July 2020 - Fixed warnings about undefined constants. Fixed undefined offset during restores.  
 June 2020 - Fixed Warning: "continue" targeting switch is equivalent to "break". Did you mean to use "continue 2"? in backup_mysql.php on line 518 $mprough  

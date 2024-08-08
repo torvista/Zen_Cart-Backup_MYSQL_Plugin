@@ -17,7 +17,7 @@ declare(strict_types=1);
 define('OS_DELIM', '');
 
 require('includes/application_top.php');
-$debug = '';
+
 $dump_params = '';
 $tables_to_export = (isset($_GET['tables']) && $_GET['tables'] != '') ? str_replace(',', ' ', $_GET['tables']) : '';
 $redirect = (isset($_GET['returnto']) && $_GET['returnto'] != '') ? $_GET['returnto'] : '';
@@ -26,9 +26,8 @@ $_POST['compress'] = (isset($_REQUEST['compress'])) ? $_REQUEST['compress'] : fa
 $strA = '';
 $strB = '';
 $compress_override = (isset($_GET['comp']) && $_GET['comp'] > 0) || COMPRESS_OVERRIDE == 'true';
-if (isset($_GET['debug']) && ($_GET['debug'] == 'ON' || $_GET['debug'] > 0)) {
-    $debug = 'ON';
-}
+
+$debug = isset($_GET['debug']) && ($_GET['debug'] == 'ON' || (int)$_GET['debug'] === 1);
 $skip_locks_requested = (isset($_REQUEST['skiplocks']) && $_REQUEST['skiplocks'] == 'yes');
 
 // check to see if open_basedir restrictions in effect -- if so, likely won't be able to use this tool.
@@ -49,7 +48,7 @@ if ($open_basedir != '') {
 $exec_disabled = false;
 $php_disabled_functions = @ini_get("disable_functions");
 if ($php_disabled_functions != '') {
-    if ($debug == 'ON') {
+    if ($debug) {
         $messageStack->add('PHP-Disabled-functions: ' . $php_disabled_functions, 'error');
     }
     if (in_array('exec', preg_split('/,/', str_replace(' ', '', $php_disabled_functions)))) {
@@ -101,7 +100,7 @@ foreach ($pathsearch as $path) {
             $mysqldump_exe = $path . 'mysqldump.exe';
         }
     }
-    if ($debug == 'ON') {
+    if ($debug) {
         $messageStack->add_session('Checking Path: ' . $path . '<br>', 'caution');
     }
     if ($mysql_exe != 'unknown' && $mysqldump_exe != 'unknown') {
@@ -126,16 +125,16 @@ if ($mysqldump_exe == 'unknown') {
 
 $mysql_exe = '"' . $mysql_exe . '"';
 $mysqldump_exe = '"' . $mysqldump_exe . '"';
-if ($debug == 'ON') {
+if ($debug) {
     $messageStack->add_session('<br>', 'caution');
 }
-if ($debug == 'ON') {
+if ($debug) {
     $messageStack->add_session('COMMAND FILES SELECTED:', 'caution');
 }
-if ($debug == 'ON') {
+if ($debug) {
     $messageStack->add_session('mysqlexe=' . $mysql_exe . '<br>', 'caution');
 }
-if ($debug == 'ON') {
+if ($debug) {
     $messageStack->add_session('mysqldumpexe=' . $mysqldump_exe . '<br><br>', 'caution');
 }
 
@@ -180,7 +179,7 @@ if (zen_not_null($action)) {
             // remove " marks in parameters for friendlier IIS support
 //REQUIRES TESTING:        if (strstr($toolfilename,'.exe')) $dump_params = str_replace('"','',$dump_params);
 
-            if ($debug == 'ON') {
+            if ($debug) {
                 $messageStack->add_session('COMMAND: ' . OS_DELIM . $toolfilename . ' ' . $dump_params . OS_DELIM, 'caution');
             }
 
@@ -189,7 +188,7 @@ if (zen_not_null($action)) {
             if ($dump_results == -1) {
                 $messageStack->add_session(FAILURE_BACKUP_FAILED_CHECK_PERMISSIONS . '<br>The command being run is: ' . $toolfilename . str_replace('--password=' . DB_SERVER_PASSWORD, '--password=*****', str_replace('2>&1', '', $dump_params)), 'error');
             }
-            if ($debug == 'ON' || (zen_not_null($dump_results) && $dump_results != '0')) {
+            if ($debug || (zen_not_null($dump_results) && $dump_results != '0')) {
                 $messageStack->add_session('Result code: ' . $dump_results, 'caution');
             }
 
@@ -197,10 +196,10 @@ if (zen_not_null($action)) {
             if (zen_not_null($resultcodes)) {
                 [$strA, $strB] = array_pad(explode('|', $resultcodes, 2), 2, null);
             }
-            if ($debug == 'ON') {
+            if ($debug) {
                 $messageStack->add_session("valueA: " . $strA, 'error');
             }
-            if ($debug == 'ON') {
+            if ($debug) {
                 $messageStack->add_session("valueB: " . $strB, 'error');
             }
 
@@ -218,7 +217,7 @@ if (zen_not_null($action)) {
                 zen_redirect(
                     zen_href_link(
                         FILENAME_BACKUP_MYSQL,
-                        'action=backupnow' . (($debug == 'ON') ? '&debug=ON' : '') . (($_POST['compress'] !== false) ? '&compress=' . $_POST['compress'] : '') . (($tables_to_export != '') ? '&tables=' . str_replace(' ', ',', $tables_to_export) : '') . '&skiplocks=yes'
+                        'action=backupnow' . (($debug) ? '&debug=ON' : '') . (($_POST['compress'] !== false) ? '&compress=' . $_POST['compress'] : '') . (($tables_to_export != '') ? '&tables=' . str_replace(' ', ',', $tables_to_export) : '') . '&skiplocks=yes'
                     )
                 );
             } else {
@@ -327,7 +326,7 @@ if (zen_not_null($action)) {
                 // remove " marks in parameters for friendlier IIS support
 //REQUIRES TESTING:          if (strstr($toolfilename,'.exe')) $load_params = str_replace('"','',$load_params);
 
-                if ($debug == 'ON') {
+                if ($debug) {
                     $messageStack->add_session('COMMAND: ' . OS_DELIM . $toolfilename . ' ' . $load_params . OS_DELIM, 'caution');
                 }
 
@@ -337,13 +336,13 @@ if (zen_not_null($action)) {
                 if (zen_not_null($resultcodes)) {
                     list($strA, $strB) = preg_split('/[|]/', $resultcodes);
                 }
-                if ($debug == 'ON') {
+                if ($debug) {
                     $messageStack->add_session("valueA: " . $strA, 'error');
                 }
-                if ($debug == 'ON') {
+                if ($debug) {
                     $messageStack->add_session("valueB: " . $strB, 'error');
                 }
-                if ($debug == 'ON' || (zen_not_null($load_results) && $load_results != '0')) {
+                if ($debug || (zen_not_null($load_results) && $load_results != '0')) {
                     $messageStack->add_session('Result code: ' . $load_results, 'caution');
                 }
 
@@ -392,7 +391,6 @@ if (zen_not_null($action)) {
             }
 
          // zen_remove does not return a value
-            zen_remove(DIR_FS_BACKUP . '/' . $_GET['file']);
         /*
             $zremove_error = zen_remove(DIR_FS_BACKUP . '/' . $_GET['file']);
             // backwards compatibility:
@@ -404,11 +402,14 @@ if (zen_not_null($action)) {
                 zen_redirect(zen_href_link(FILENAME_BACKUP_MYSQL));
             }
         */
+            zen_remove(DIR_FS_BACKUP . '/' . $_GET['file']);
+            $messageStack->add_session(SUCCESS_BACKUP_DELETED, 'success');
+            zen_redirect(zen_href_link(FILENAME_BACKUP_MYSQL));
             break;
     }
 }
 
-// check if the backup directory exists
+// Check if the backup directory exists
 $dir_ok = false;
 if (is_dir(DIR_FS_BACKUP)) {
     if (is_writable(DIR_FS_BACKUP)) {
@@ -473,7 +474,7 @@ if (is_dir(DIR_FS_BACKUP)) {
                         && ($action != 'restorelocal')) {
                         $file_array['file'] = $entry;
                         $file_array['date'] = date(PHP_DATE_TIME_FORMAT, filemtime(DIR_FS_BACKUP . $entry));
-                        $file_array['size'] = number_format(filesize(DIR_FS_BACKUP . $entry)) . ' bytes';
+                        $file_array['size'] = number_format(filesize(DIR_FS_BACKUP . $entry)/1024) . ' kb';
 
                         switch (substr($entry, -3)) {
                             case 'zip':
@@ -505,16 +506,14 @@ if (is_dir(DIR_FS_BACKUP)) {
                         <?= '<a href="' . ((ENABLE_SSL_ADMIN == 'true') ? DIR_WS_HTTPS_ADMIN : DIR_WS_ADMIN) . 'backups/' . $entry . '">' . zen_image(DIR_WS_ICONS . 'file_download.gif', ICON_FILE_DOWNLOAD) . '</a>&nbsp;' . $entry ?></td>
                     <td class="dataTableContent center" onClick="document.location.href='<?= zen_href_link(FILENAME_BACKUP_MYSQL, $onclick_link) ?>'">
                         <?= date(PHP_DATE_TIME_FORMAT, filemtime(DIR_FS_BACKUP . $entry)) ?></td>
-                    <td class="dataTableContent right" onClick="document.location.href='<?= zen_href_link(FILENAME_BACKUP_MYSQL, $onclick_link) ?>'"><?= number_format(filesize(DIR_FS_BACKUP . $entry)) ?> bytes
-                    </td>
+                    <td class="dataTableContent right" onClick="document.location.href='<?= zen_href_link(FILENAME_BACKUP_MYSQL, $onclick_link) ?>'"><?= number_format(filesize(DIR_FS_BACKUP . $entry)/1024) ?> Kb</td>
                     <td class="dataTableContent right"><?php
                         if (isset($buInfo) && is_object($buInfo) && ($entry == $buInfo->file)) {
                             echo zen_image(DIR_WS_IMAGES . 'icon_arrow_right.gif', '');
                         } else {
                             echo '<a href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'file=' . $entry) . '">' . zen_image(DIR_WS_IMAGES . 'icon_info.gif', IMAGE_ICON_INFO) . '</a>';
-                        } ?>&nbsp;
-                    </td>
-                    <?= '</tr>' ?>
+                        } ?>&nbsp;</td>
+                    </tr>
                     <?php
                 }
                 $dir->close();
@@ -525,13 +524,11 @@ if (is_dir(DIR_FS_BACKUP)) {
 
             <div class="right">
                 <?php
-                if ( ($action != 'backup') && !ini_get('safe_mode') && $dir_ok) {
-                    echo '<a href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'action=backup' . (($debug == 'ON') ? '&debug=ON' : '')) . (($tables_to_export != '') ? '&tables=' . str_replace(' ', ',', $tables_to_export) : '') . '">' .
-                        zen_image_button('button_backup.gif', IMAGE_BACKUP) . '</a>&nbsp;&nbsp;';
+                if (($action != 'backup') && !ini_get('safe_mode') && $dir_ok) {
+                    echo '<a class="btn btn-primary" role="button" href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'action=backup' . ($debug ? '&debug=ON' : '')) . (($tables_to_export != '') ? '&tables=' . str_replace(' ', ',', $tables_to_export) : '') . '">' . IMAGE_BACKUP . '</a>&nbsp;&nbsp;';
                 }
                 if (($action != 'restorelocal') && isset($dir)) {
-                    echo '<a href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'action=restorelocal' . (($debug == 'ON') ? '&debug=ON' : '')) . '">' .
-                        zen_image_button('button_restore.gif', IMAGE_RESTORE) . '</a>';
+                    echo '<a class="btn btn-primary" role="button" href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'action=restorelocal' . ($debug ? '&debug=ON' : '')) . '">' . IMAGE_RESTORE . '</a>';
                 } ?>
             </div>
             <div class="small">
@@ -555,16 +552,19 @@ if (is_dir(DIR_FS_BACKUP)) {
                 case 'backup':
                     $heading[] = ['text' => '<strong>' . TEXT_INFO_HEADING_NEW_BACKUP . '</strong>'];
 
-                    $contents = ['form' => zen_draw_form('backup', FILENAME_BACKUP_MYSQL, 'action=backupnow' . (($debug == 'ON') ? '&debug=ON' : '') . (($tables_to_export != '') ? '&tables=' . str_replace(' ', ',', $tables_to_export) : ''))];
+                    $contents = ['form' => zen_draw_form('backup', FILENAME_BACKUP_MYSQL, 'action=backupnow' . ($debug ? '&debug=ON' : '') . (($tables_to_export != '') ? '&tables=' . str_replace(' ', ',', $tables_to_export) : ''), 'post', 'id="backup"')];
+
                     $contents[] = ['text' => TEXT_INFO_NEW_BACKUP];
 
                     $contents[] = ['text' => zen_draw_radio_field('compress', 'no', !@file_exists(LOCAL_EXE_GZIP) && !$compress_override) . ' ' . TEXT_INFO_USE_NO_COMPRESSION];
+
                     if (@file_exists(LOCAL_EXE_GZIP) || $compress_override) {
                         $contents[] = ['text' => zen_draw_radio_field('compress', 'gzip', true) . ' ' . TEXT_INFO_USE_GZIP];
                     }
                     if (@file_exists(LOCAL_EXE_ZIP)) {
                         $contents[] = ['text' => zen_draw_radio_field('compress', 'zip', !@file_exists(LOCAL_EXE_GZIP)) . ' ' . TEXT_INFO_USE_ZIP];
                     }
+
                     $contents[] = ['text' => zen_draw_radio_field('skiplocks', 'yes', false) . ' ' . TEXT_INFO_SKIP_LOCKS];
 
                     // Download to file --- Should only be done if SSL is active, otherwise database is exposed as clear text
@@ -574,19 +574,20 @@ if (is_dir(DIR_FS_BACKUP)) {
                         $contents[] = ['text' => zen_draw_radio_field('download', 'yes', true) . ' ' . TEXT_INFO_DOWNLOAD_ONLY . '*<br><span class="errorText">*' . TEXT_INFO_BEST_THROUGH_HTTPS . '</span>'];
                     }
 
-                    // display backup button
+                    // Display Backup and Cancel buttons
                     $contents[] = [
                         'align' => 'center',
-                        'text' =>  zen_image_submit('button_backup.gif', IMAGE_BACKUP) . '&nbsp;<a href="' . zen_href_link(FILENAME_BACKUP_MYSQL, (($debug == 'ON') ? 'debug=ON' : '')) . (($tables_to_export != '') ? '&tables=' . str_replace(
-                                    ' ',
-                                    ',',
-                                    $tables_to_export
-                                ) : '') . '">' . zen_image_button('button_cancel.gif', IMAGE_CANCEL) . '</a>'
+                        'text' =>  '<button type="submit" form="backup" class="btn btn-primary" role="button">' . IMAGE_BACKUP . '</button>' . '&nbsp;&nbsp;' .
+                            '<a href="' . zen_href_link(FILENAME_BACKUP_MYSQL) . '" class="btn btn-primary" role="button">' . IMAGE_CANCEL . '</a>'
                     ];
                     break;
 
                 case 'restore':
-                    $heading[] = ['text' => '<strong>' . $buInfo->date . '</strong>'];
+                    $heading[] = ['text' => '<strong>' . $buInfo->file . '</strong>'];
+
+                    $contents[] = ['text' => TEXT_INFO_DATE . ' ' . $buInfo->date];
+                    $contents[] = ['text' => TEXT_INFO_SIZE . ' ' . $buInfo->size];
+                    $contents[] = ['text' => TEXT_INFO_COMPRESSION . ' ' . $buInfo->compression];
 
                     $contents[] = [
                         'text' => zen_break_string(
@@ -595,23 +596,29 @@ if (is_dir(DIR_FS_BACKUP)) {
                             ' '
                         )
                     ];
+
+                    // Display Restore and Cancel buttons
                     $contents[] = [
                         'align' => 'center',
-                        'text' => '<a href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'file=' . $buInfo->file . '&action=restorenow' . (($debug == 'ON') ? '&debug=ON' : '')) . '">' . zen_image_button('button_restore.gif', IMAGE_RESTORE) . '</a>&nbsp;<a href="' . zen_href_link(
-                                FILENAME_BACKUP_MYSQL,
-                                'file=' . $buInfo->file . (($debug == 'ON') ? '&debug=ON' : '')
-                            ) . '">' . zen_image_button('button_cancel.gif', IMAGE_CANCEL) . '</a>'
+                        'text' => '<a class="btn btn-primary" role="button" href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'file=' . $buInfo->file . '&action=restorenow' . ($debug ? '&debug=ON' : '')) . '">' . IMAGE_RESTORE . '</a>' . '&nbsp;&nbsp' .
+                        '<a class="btn btn-primary" role="button" href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'file=' . $buInfo->file . ($debug ? '&debug=ON' : '')
+                            ) . '">' . IMAGE_CANCEL . '</a>'
                     ];
                     break;
 
                 case 'restorelocal':
                     $heading[] = ['text' => '<strong>' . TEXT_INFO_HEADING_RESTORE_LOCAL . '</strong>'];
 
-                    $contents = ['form' => zen_draw_form('restore', FILENAME_BACKUP_MYSQL, 'action=restorelocalnow' . (($debug == 'ON') ? '&debug=ON' : ''), 'post', 'enctype="multipart/form-data"')];
+                    $contents = ['form' => zen_draw_form('restore', FILENAME_BACKUP_MYSQL, 'action=restorelocalnow' . ($debug ? '&debug=ON' : ''), 'post', 'enctype="multipart/form-data"')];
                     $contents[] = ['text' => TEXT_INFO_RESTORE_LOCAL . '<br><br>' . TEXT_INFO_BEST_THROUGH_HTTPS];
                     $contents[] = ['text' => zen_draw_file_field('sql_file')];
                     $contents[] = ['text' => TEXT_INFO_RESTORE_LOCAL_RAW_FILE];
-                    $contents[] = ['align' => 'center', 'text' => '<br>' . zen_image_submit('button_restore.gif', IMAGE_RESTORE) . '&nbsp;<a href="' . zen_href_link(FILENAME_BACKUP_MYSQL, (($debug == 'ON') ? 'debug=ON' : '')) . '">' . zen_image_button('button_cancel.gif', IMAGE_CANCEL) . '</a>'];
+
+                    //Display Restore and Cancel buttons
+                    $contents[] = [
+                        'align' => 'center',
+                        'text' => '<button type="submit" class="btn btn-primary" role="button">' . IMAGE_RESTORE . '</button>' . '&nbsp;&nbsp;' .
+                        '<a class="btn btn-primary" role="button" href="' . zen_href_link(FILENAME_BACKUP_MYSQL, ($debug ? 'debug=ON' : '')) . '">' . IMAGE_CANCEL . '</a>'];
                     break;
 
                 case 'delete':
@@ -622,24 +629,28 @@ if (is_dir(DIR_FS_BACKUP)) {
 
                     $contents = ['form' => zen_draw_form('delete', FILENAME_BACKUP_MYSQL, 'file=' . $buInfo->file . '&action=deleteconfirm')];
                     $contents[] = ['text' => TEXT_DELETE_INTRO];
-                    $contents[] = ['text' => '<br><strong>' . $buInfo->file . '</strong>'];
-                    $contents[] = ['align' => 'center', 'text' => '<br>' . zen_image_submit('button_delete.gif', IMAGE_DELETE) . ' <a href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'file=' . $buInfo->file) . '">' . zen_image_button('button_cancel.gif', IMAGE_CANCEL) . '</a>'];
+                    $contents[] = ['text' => '<strong>' . $buInfo->file . '</strong>'];
+
+                    //Display Delete and Cancel buttons
+                    $contents[] = ['align' => 'center',
+                        'text' => '<button type="submit" class="btn btn-primary">' . IMAGE_DELETE . '</button>' . '&nbsp;&nbsp;' .
+                            '<a class="btn btn-primary" role="button" href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'file=' . $buInfo->file) . '">' . IMAGE_CANCEL . '</a>'];
                     break;
 
                 default:
                     if (isset($buInfo) && is_object($buInfo)) {
-                        $heading[] = ['text' => '<strong>' . $buInfo->date . '</strong>'];
+                        $heading[] = ['text' => '<strong>' . $buInfo->file . '</strong>'];
 
-                        $contents[] = [
-                            'align' => 'center',
-                            'text' => '<a href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'file=' . $buInfo->file . '&action=restore' . (($debug == 'ON') ? '&debug=ON' : '')) . '">' .
-                                zen_image_button('button_restore.gif', IMAGE_RESTORE) . '</a> ' .
-                                (($dir_ok && !$exec_disabled) ? '<a href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'file=' . $buInfo->file . '&action=delete') . '">' .
-                                    zen_image_button('button_delete.gif', IMAGE_DELETE) . '</a>' : '')
-                        ];
                         $contents[] = ['text' => TEXT_INFO_DATE . ' ' . $buInfo->date];
                         $contents[] = ['text' => TEXT_INFO_SIZE . ' ' . $buInfo->size];
                         $contents[] = ['text' => TEXT_INFO_COMPRESSION . ' ' . $buInfo->compression];
+
+                        //Display Restore and Delete buttons
+                        $contents[] = [
+                            'align' => 'center',
+                            'text' => '<a class="btn btn-primary" role="button" href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'file=' . $buInfo->file . '&action=restore' . ($debug ? '&debug=ON' : '')) . '">' . IMAGE_RESTORE . '</a>' . '&nbsp;&nbsp;' .
+                                (($dir_ok && !$exec_disabled) ? '<a class="btn btn-primary" role="button" href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'file=' . $buInfo->file . '&action=delete') . '">' . IMAGE_DELETE . '</a>' : '')
+                        ];
                     }
                     break;
             }
