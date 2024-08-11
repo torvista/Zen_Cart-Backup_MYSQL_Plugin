@@ -79,7 +79,7 @@ Review this
 ## Changelog
 2024 08 torvista  
 features: add suffix to backup filename  
-misc fettling: formatting, use short echo tags, remove unused td of download icon, remove unused row hover effect, remove br tags from infobox, add th tags to table, simplifications (use str_starts_with, str_ends with etc., use of $dir_ok, $exec_disabled, unnecessary clauses), disable check for return value of zen_remove, use CSS buttons, use Kb for size, simplify use of $debug, strict comparisons, SSL warnings, use constant BACKUP_MYSQL_LAST_RESTORED
+misc fettling: formatting, use short echo tags, remove unused td of download icon, remove unused row hover effect, remove br tags from infobox, add th tags to table, simplifications (use str_starts_with, str_ends with etc., use of $dir_ok, $exec_disabled, unnecessary clauses), disable check for return value of zen_remove, use CSS buttons, use Kb for size, simplify use of $debug, strict comparisons, SSL warnings, use constant BACKUP_MYSQL_LAST_RESTORED, add $debug to all buttons to persist.
 
 Converted to encapsulated plugin.  
 move Last Restored and buttons outside file list table  

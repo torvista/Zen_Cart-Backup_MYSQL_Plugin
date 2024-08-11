@@ -150,7 +150,7 @@ if (zen_not_null($action)) {
         case 'forget':
             $db->Execute("DELETE FROM " . TABLE_CONFIGURATION . " WHERE configuration_key = 'BACKUP_MYSQL_LAST_RESTORE'");
             $messageStack->add_session(SUCCESS_LAST_RESTORE_CLEARED, 'success');
-            zen_redirect(zen_href_link(FILENAME_BACKUP_MYSQL));
+            zen_redirect(zen_href_link(FILENAME_BACKUP_MYSQL, ($debug ? 'debug=ON' : '')));
             break;
 
         case 'backupnow':
@@ -286,7 +286,7 @@ if (zen_not_null($action)) {
                         }
                 }
             }
-            zen_redirect(zen_href_link(FILENAME_BACKUP_MYSQL));
+            zen_redirect(zen_href_link(FILENAME_BACKUP_MYSQL, ($debug ? 'debug=ON' : '')));
             break;
 
         case 'restorenow':
@@ -377,7 +377,7 @@ if (zen_not_null($action)) {
                 $messageStack->add_session(sprintf(FAILURE_DATABASE_NOT_RESTORED_FILE_NOT_FOUND, '[' . $restore_from . ']'), 'error');
             } // endif file_exists
 
-            zen_redirect(zen_href_link(FILENAME_BACKUP_MYSQL));
+            zen_redirect(zen_href_link(FILENAME_BACKUP_MYSQL, ($debug ? 'debug=ON' : '')));
             break;
 
         case 'download':
@@ -399,7 +399,7 @@ if (zen_not_null($action)) {
 
         case 'deleteconfirm':
             if (str_contains($_GET['file'], '..')) {
-                zen_redirect(zen_href_link(FILENAME_BACKUP_MYSQL));
+                zen_redirect(zen_href_link(FILENAME_BACKUP_MYSQL, ($debug ? 'debug=ON' : '')));
             }
 
          // zen_remove does not return a value
@@ -416,7 +416,7 @@ if (zen_not_null($action)) {
         */
             zen_remove(DIR_FS_BACKUP . '/' . $_GET['file']);
             $messageStack->add_session(SUCCESS_BACKUP_DELETED, 'success');
-            zen_redirect(zen_href_link(FILENAME_BACKUP_MYSQL));
+            zen_redirect(zen_href_link(FILENAME_BACKUP_MYSQL, ($debug ? 'debug=ON' : '')));
             break;
     }
 }
@@ -503,15 +503,15 @@ if (is_dir(DIR_FS_BACKUP)) {
                         $buInfo = new objectInfo($file_array);
                     }
 
-                if (isset($buInfo) && is_object($buInfo) && ($entry === $buInfo->file)) {
-                $onclick_link = 'file=' . $buInfo->file . '&action=restore';
-                ?>
-                <tr id="defaultSelected" class="dataTableRowSelected">
-                    <?php
+                    if (isset($buInfo) && is_object($buInfo) && ($entry === $buInfo->file)) {
+                        $onclick_link = 'file=' . $buInfo->file . '&action=restore' . ($debug ? '&debug=ON' : '');
+                        ?>
+                        <tr id="defaultSelected" class="dataTableRowSelected">
+                        <?php
                     } else {
-                    $onclick_link = 'file=' . $entry; ?>
-                <tr class="dataTableRow">
-                    <?php
+                        $onclick_link = 'file=' . $entry . ($debug ? '&debug=ON' : ''); ?>
+                        <tr class="dataTableRow">
+                        <?php
                     }
                     ?>
                     <td class="dataTableContent" onClick="document.location.href='<?= zen_href_link(FILENAME_BACKUP_MYSQL, $onclick_link) ?>'">
@@ -649,14 +649,14 @@ if (is_dir(DIR_FS_BACKUP)) {
                     }
                     $heading[] = ['text' => '<strong>' . $buInfo->date . '</strong>'];
 
-                    $contents = ['form' => zen_draw_form('delete', FILENAME_BACKUP_MYSQL, 'file=' . $buInfo->file . '&action=deleteconfirm')];
+                    $contents = ['form' => zen_draw_form('delete', FILENAME_BACKUP_MYSQL, 'file=' . $buInfo->file . '&action=deleteconfirm' . ($debug ? '&debug=ON' : ''))];
                     $contents[] = ['text' => TEXT_DELETE_INTRO];
                     $contents[] = ['text' => '<strong>' . $buInfo->file . '</strong>'];
 
                     //Display Delete and Cancel buttons
                     $contents[] = ['align' => 'center',
                         'text' => '<button type="submit" class="btn btn-primary">' . IMAGE_DELETE . '</button>' . '&nbsp;&nbsp;' .
-                            '<a class="btn btn-primary" role="button" href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'file=' . $buInfo->file) . '">' . IMAGE_CANCEL . '</a>'];
+                            '<a class="btn btn-primary" role="button" href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'file=' . $buInfo->file . ($debug ? '&debug=ON' : '')) . '">' . IMAGE_CANCEL . '</a>'];
                     break;
 
                 default:
@@ -671,7 +671,7 @@ if (is_dir(DIR_FS_BACKUP)) {
                         $contents[] = [
                             'align' => 'center',
                             'text' => '<a class="btn btn-primary" role="button" href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'file=' . $buInfo->file . '&action=restore' . ($debug ? '&debug=ON' : '')) . '">' . IMAGE_RESTORE . '</a>' . '&nbsp;&nbsp;' .
-                                (($dir_ok && !$exec_disabled) ? '<a class="btn btn-primary" role="button" href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'file=' . $buInfo->file . '&action=delete') . '">' . IMAGE_DELETE . '</a>' : '')
+                                (($dir_ok && !$exec_disabled) ? '<a class="btn btn-primary" role="button" href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'file=' . $buInfo->file . '&action=delete' . ($debug ? '&debug=ON' : '')) . '">' . IMAGE_DELETE . '</a>' : '')
                         ];
                     }
                     break;
