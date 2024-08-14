@@ -158,7 +158,7 @@ if ($exec_disabled || ($shell_exec_disabled)) {
 //GZIP
 //
 //$gzip_enabled = function_exists('ob_gzhandler') && ini_get('zlib.output_compression');
-$gzip_enabled = false;
+$gzip_enabled = true;
 
 //ZIP
 $zip_enabled = class_exists('ZipArchive');
@@ -672,7 +672,7 @@ if (zen_not_null($action)) {
                             $messageStack->add_session('restore $resultcodes valueB: ' . $strB);
                         }
                     }
-                    if ($load_results !== 0 && zen_not_null($load_results)) {
+                    if (!empty($load_results) && $load_results !== 0) {
                         $messageStack->add_session(TEXT_RESULT_CODE . $load_results);
                     }
 
@@ -977,7 +977,7 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
                             $contents[] = ['text' => sprintf(TEXT_RESTORE_NO_COMPRESSION_METHOD, $buInfo->compression)];
                             $disable_restore = true;
                         }
-                        if ($buInfo->compression === 'ZIP' && $zip_enabled) {
+                        if ($buInfo->compression === 'ZIP' && !$zip_enabled) {
                             $contents[] = ['text' => sprintf(TEXT_RESTORE_NO_COMPRESSION_METHOD, $buInfo->compression)];
                             $disable_restore = true;
                         }
