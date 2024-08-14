@@ -6,7 +6,7 @@ declare(strict_types=1);
  * @copyright Copyright 2024 Zen Cart Development Team
  * @license http://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
  * @author Dr.Byte
- * @version $Id: torvista 2024 Aug 12 $
+ * @version $Id: torvista 2024 Aug 14 $
  */
 
 /** for phpStorm
@@ -43,22 +43,71 @@ function checkMysqlPath($path): array
     return [$mysql_exe, $mysqldump_exe];
 }
 
-$dump_params = '';
-$tables_to_export = !empty($_GET['tables']) ? str_replace(',', ' ', $_GET['tables']) : '';
-$redirect = !empty($_GET['returnto']) ? $_GET['returnto'] : '';
+/**
+ * Compress a file using gzip
+ *
+ * Rewritten from Simon East's version here:
+ * https://stackoverflow.com/a/22754032/3499843
+ *
+ * @param  string  $inFilename  Input filename
+ * @param  int  $level  Compression level (default: 9)
+ *
+ * @return string Output filename
+ * @throws Exception if the input or output file can not be opened
+ *
+ */
+function gzcompressfile(string $inFilename, int $level = 9): string
+{
+    // Is the file gzipped already?
+    $extension = pathinfo($inFilename, PATHINFO_EXTENSION);
+    if ($extension == 'gz') {
+        return $inFilename;
+    }
 
+    // Open input file
+    $inFile = fopen($inFilename, 'rb');
+    if ($inFile === false) {
+        throw new \Exception("Unable to open input file: $inFilename");
+    }
+
+    // Open output file
+    $gzFilename = $inFilename . '.gz';
+    $mode = 'wb' . $level;
+    $gzFile = gzopen($gzFilename, $mode);
+    if ($gzFile === false) {
+        fclose($inFile);
+        throw new \Exception("Unable to open output file: $gzFilename");
+    }
+
+    // Stream copy
+    $length = 512 * 1024; // 512 kB
+    while (!feof($inFile)) {
+        gzwrite($gzFile, fread($inFile, $length));
+    }
+
+    // Close files
+    fclose($inFile);
+    gzclose($gzFile);
+
+    // Return the new filename
+    return $gzFilename;
+}
+
+$dump_params = '';
+$restore_file = '';
 $resultcodes = '';
-$_POST['compress'] = (isset($_REQUEST['compress'])) ? $_REQUEST['compress'] : false;
 $strA = '';
 $strB = '';
-$compress_override = (isset($_GET['comp']) && $_GET['comp'] > 0) || COMPRESS_OVERRIDE == 'true';
 
-$debug = isset($_GET['debug']) && ($_GET['debug'] === 'ON' || (int)$_GET['debug'] === 1);
+$debug = isset($_GET['debug']) && (strtoupper($_GET['debug']) ===  'ON' || (int)$_GET['debug'] === 1);
 
+$tables_to_export = !empty($_GET['tables']) ? str_replace(',', ' ', $_GET['tables']) : '';
+$redirect = !empty($_GET['returnto']) ? $_GET['returnto'] : '';
+$_POST['compress'] = !empty($_REQUEST['compress']) ? $_REQUEST['compress'] : false;
 $skip_locks_requested = isset($_REQUEST['skiplocks']) && $_REQUEST['skiplocks'] == 'yes';
+
+// check for use of SSL
 $ssl_on = str_starts_with(HTTP_SERVER, 'https');
-$gzip_enabled = function_exists('ob_gzhandler') && ini_get('zlib.output_compression');
-$zip_enabled = class_exists('ZipArchive');
 
 // check if the backup directory exists
 $dir_ok = false;
@@ -72,7 +121,7 @@ if (is_dir(DIR_FS_BACKUP)) {
     $messageStack->add(ERROR_BACKUP_DIRECTORY_DOES_NOT_EXIST . ': ' . DIR_FS_BACKUP);
 }
 if ($debug && $dir_ok) {
-    $messageStack->add(sprintf(TEXT_BACKUP_DIRECTORY_OK, DIR_FS_BACKUP), 'success');
+    $messageStack->add('Backup Directory: "'. DIR_FS_BACKUP .'" valid.', 'success');
 }
 // check to see if open_basedir restrictions in effect -- if so, likely won't be able to use this tool.
 $flag_basedir = false;
@@ -105,6 +154,18 @@ if ($exec_disabled || ($shell_exec_disabled)) {
     $messageStack->add(ERROR_PHP_DISABLED_FUNCTIONS . $php_disabled_functions, 'warning');
 }
 
+//Compression
+//GZIP
+//
+//$gzip_enabled = function_exists('ob_gzhandler') && ini_get('zlib.output_compression');
+$gzip_enabled = false;
+
+//ZIP
+$zip_enabled = class_exists('ZipArchive');
+if ($debug) {
+    $messageStack->add($zip_enabled ? 'ZIP compression enabled in PHP' : 'ZIP compression not enabled in PHP (class ZipArchive not found', 'info');
+}
+
 // WHERE ARE THE MYSQL EXECUTABLES?
 // The location will vary per server/installation.
 $mysql_exe = 'unknown';
@@ -113,12 +174,15 @@ $path_found = '';
 
 // try the last successful path saved
 if (defined('BACKUP_MYSQL_LOCATION')) {
+    if ($debug) {
+        $messageStack->add('BACKUP_MYSQL_LOCATION = "' . BACKUP_MYSQL_LOCATION, 'info');
+    }
     [$mysql_exe, $mysqldump_exe] = checkMysqlPath(BACKUP_MYSQL_LOCATION);
 }
-if ($mysql_exe !== 'unknown' && $mysqldump_exe !== 'unknown') {
+if (defined('BACKUP_MYSQL_LOCATION') && ($mysql_exe !== 'unknown' && $mysqldump_exe !== 'unknown')) {
     $path_found = BACKUP_MYSQL_LOCATION;
     if ($debug) {
-        $messageStack->add(sprintf(TEXT_EXECUTABLES_FOUND_DB, $path_found), 'success');
+        $messageStack->add('MySQL tools found from BACKUP_MYSQL_LOCATION: $mysql_exe="' . $mysql_exe . '", $mysqldump_exe="' .  $mysqldump_exe . '"', 'success');
     }
 // or, if DB constant is not valid
 } else {
@@ -158,7 +222,7 @@ if ($mysql_exe !== 'unknown' && $mysqldump_exe !== 'unknown') {
         $paths_auto = str_replace('mysql', '', trim(shell_exec('which mysql')));
     }
     if ($debug) {
-        $messageStack->add(sprintf(TEXT_AUTO_DETECTED_PATH, PHP_OS, $paths_auto), 'info');
+        $messageStack->add('Auto-Detected path to check:"' . $paths_auto . '"', 'info');
     }
 
     //is a path manually defined in /extra_datafiles?
@@ -196,7 +260,7 @@ if ($mysql_exe !== 'unknown' && $mysqldump_exe !== 'unknown') {
         $path = str_replace(['\\', '//', "'"], ['/', '/', ""], $path);
         $path = (!str_ends_with($path, '/') && !str_ends_with($path, '\\')) ? $path . '/' : $path; // add a '/' to the end if missing
         if ($debug) {
-            $messageStack->add(TEXT_CHECK_PATH . $path, 'info');
+            $messageStack->add('Checking Path: "' . $path . '"', 'info');
         }
 
         [$mysql_exe, $mysqldump_exe] = checkMysqlPath($path);
@@ -217,7 +281,7 @@ if ($mysql_exe !== 'unknown' && $mysqldump_exe !== 'unknown') {
 
 if (($shell_exec_disabled || $debug) && !empty($path_found)) {
     if ($debug) {
-        $messageStack->add(sprintf(TEXT_EXECUTABLES_FOUND, 'mysql exe =' . $mysql_exe, 'mysqldump exe=' . $mysqldump_exe), 'success');
+        $messageStack->add('MySQL tools found: $mysql_exe="' . $mysql_exe . '", $mysqldump_exe="' .  $mysqldump_exe . '"', 'success');
     }
     //store path in db
     $db->Execute(
@@ -249,7 +313,7 @@ if (zen_not_null($action)) {
                 $suffix = '';
             }
 
-            $backup_file = 'db_' . DB_DATABASE . '-' . ($tables_to_export !== '' ? 'limited-' : '') . date('YmdHis') . $suffix . '.sql';
+            $backup_file = 'db_' . DB_DATABASE . '-' . ($tables_to_export !== '' ? 'limited-' : '') . date('Y-m-d_H-i-s') . $suffix . '.sql';
             /* this parameter needed for cron backup, but not here, although same db
             //echo "MySQL version=" . mysqli_get_client_version();die;
             $mysql_version = (int)(mysqli_get_client_version()/10000);
@@ -284,7 +348,7 @@ if (zen_not_null($action)) {
 //REQUIRES TESTING:        if (strstr($toolfilename,'.exe')) $dump_params = str_replace('"','',$dump_params);
 
             if ($debug) {
-                $messageStack->add_session(TEXT_COMMAND . $toolfilename . ' ' . $dump_params, 'caution');
+                $messageStack->add_session('Backup COMMAND: ' . $toolfilename . ' ' . $dump_params, 'info');
             }
 
             //- In PHP/5.2 and older you have to surround the full command plus arguments in double quotes
@@ -353,162 +417,101 @@ if (zen_not_null($action)) {
             }
 
             //compress the file as requested & optionally download
-            if (isset($_POST['download']) && ($_POST['download'] == 'yes') && file_exists(DIR_FS_BACKUP . $backup_file)) {
+            /*
+                   if (file_exists(DIR_FS_BACKUP . $backup_file)) {
+                       echo 'FOUND DIR_FS_BACKUP.$backup_file=' . DIR_FS_BACKUP . $backup_file;
+                   } else{
+                       echo 'NOT FOUND DIR_FS_BACKUP.$backup_file=' . DIR_FS_BACKUP . $backup_file;
+                   }die;
+   */
+            if (file_exists(DIR_FS_BACKUP . $backup_file)) {
                 switch ($_POST['compress']) {
                     case 'gzip':
-                        @exec(LOCAL_EXE_GZIP . ' ' . DIR_FS_BACKUP . $backup_file);
-                        $backup_file .= '.gz';
+                        //@exec(LOCAL_EXE_GZIP . ' ' . DIR_FS_BACKUP . $backup_file);
+                        //$backup_file .= '.gz';
+
+                        $gzipped_filename = gzcompressfile(DIR_FS_BACKUP . $backup_file);
+                        //successful compression
+                        if ($gzipped_filename = DIR_FS_BACKUP . $backup_file . '.gz') {
+                            unlink(DIR_FS_BACKUP . $backup_file);
+                            $backup_file .= '.gz'; //add extension to name
+                        }
                         break;
+
                     case 'zip':
-                        @exec(LOCAL_EXE_ZIP . ' -j ' . DIR_FS_BACKUP . $backup_file . '.zip ' . DIR_FS_BACKUP . $backup_file);
+                        /*@exec(LOCAL_EXE_ZIP . ' -j ' . DIR_FS_BACKUP . $backup_file . '.zip ' . DIR_FS_BACKUP . $backup_file);
                         if (file_exists(DIR_FS_BACKUP . $backup_file) && file_exists(DIR_FS_BACKUP . $backup_file . 'zip')) {
+                            unlink(DIR_FS_BACKUP . $backup_file);
+                        }
+                        $backup_file .= '.zip';*/
+
+                        $zip = new ZipArchive();
+                        $zipped_file = DIR_FS_BACKUP . $backup_file . '.zip';
+                        if ($zip->open($zipped_file, ZipArchive::CREATE) !== true) {
+                            exit("cannot open <$zipped_file>\n");
+                        }
+                        $zip->addFile(DIR_FS_BACKUP . $backup_file, $backup_file);
+                        $zip->close();
+                        if (file_exists($zipped_file) && file_exists(DIR_FS_BACKUP . $backup_file)) {
                             unlink(DIR_FS_BACKUP . $backup_file);
                         }
                         $backup_file .= '.zip';
-                }
-                if (preg_match('/MSIE/', $_SERVER['HTTP_USER_AGENT'])) {
-                    header('Content-Type: application/octetstream');
-//            header('Content-Disposition: inline; filename="' . $backup_file . '"');
-                    header('Content-Disposition: attachment; filename=' . $backup_file);
-                    header("Expires: Mon, 26 Jul 2001 05:00:00 GMT");
-                    header("Last-Modified: " . gmdate("D, d M Y H:i:s") . " GMT");
-                    header("Cache-Control: must_revalidate, post-check=0, pre-check=0");
-                    header("Pragma: public");
-                    header("Cache-control: private");
-                } else {
-                    header('Content-Type: application/x-octet-stream');
-                    header('Content-Disposition: attachment; filename=' . $backup_file);
-                    header("Expires: Mon, 26 Jul 2001 05:00:00 GMT");
-                    header("Last-Modified: " . gmdate("D, d M Y H:i:s") . " GMT");
-                    header("Pragma: no-cache");
-                }
-
-                readfile(DIR_FS_BACKUP . $backup_file);
-                unlink(DIR_FS_BACKUP . $backup_file);
-
-                exit;
-            } else {
-                switch ($_POST['compress'] && file_exists(DIR_FS_BACKUP . $backup_file)) {
-                    case 'gzip':
-                        @exec(LOCAL_EXE_GZIP . ' ' . DIR_FS_BACKUP . $backup_file);
-                        if (file_exists(DIR_FS_BACKUP . $backup_file)) {
-                            @exec('gzip ' . DIR_FS_BACKUP . $backup_file);
-                        }
                         break;
-                    case 'zip':
-                        @exec(LOCAL_EXE_ZIP . ' -j ' . DIR_FS_BACKUP . $backup_file . '.zip ' . DIR_FS_BACKUP . $backup_file);
-                        if (file_exists(DIR_FS_BACKUP . $backup_file) && file_exists(DIR_FS_BACKUP . $backup_file . 'zip')) {
-                            unlink(DIR_FS_BACKUP . $backup_file);
-                        }
                 }
             }
+
+            //download
+            if ((isset($_POST['download']) && $_POST['download'] === 'yes') && file_exists(DIR_FS_BACKUP . $backup_file)) {
+                if (str_contains($_SERVER['HTTP_USER_AGENT'], 'MSIE')) {
+                    header('Content-Type: application/octetstream');
+                    // header('Content-Disposition: inline; filename="' . $backup_file . '"');
+                    header('Content-Disposition: attachment; filename="' . $backup_file . '"');//steve added double quotes
+                    header('Content-Length: ' . filesize(DIR_FS_BACKUP . $backup_file));//steve added
+                    header('Expires: Mon, 26 Jul 2001 05:00:00 GMT');
+                    header('Last-Modified: ' . gmdate('D, d M Y H:i:s') . ' GMT');
+                    header('Cache-Control: must_revalidate, post-check=0, pre-check=0');
+                    header('Pragma: public');
+                    header('Cache-control: private');
+                } else {
+                    header('Content-Type: application/x-octet-stream');
+                    header('Content-Disposition: attachment; filename="' . $backup_file . '"');//steve added double quotes
+                    header('Content-Length: ' . filesize(DIR_FS_BACKUP . $backup_file));//steve added
+                    header('Expires: Mon, 26 Jul 2001 05:00:00 GMT');
+                    header('Last-Modified: ' . gmdate('D, d M Y H:i:s') . ' GMT');
+                    header('Pragma: no-cache');
+                }
+
+                if (ob_get_level() !== 0) {
+                    ob_end_clean();
+                }
+                readfile(DIR_FS_BACKUP . $backup_file);
+                unlink(DIR_FS_BACKUP . $backup_file);
+                unset($_GET['action']);
+                exit();
+            }
+
             zen_redirect(zen_href_link(FILENAME_BACKUP_MYSQL, ($debug ? 'debug=ON' : '')));
             break;
 
-        case 'restorenow':
-        case 'restorelocalnow':
-            zen_set_time_limit(300);
-            $specified_restore_file = (isset($_GET['file'])) ? $_GET['file'] : '';
-
-            if ($specified_restore_file != '' && file_exists(DIR_FS_BACKUP . $specified_restore_file)) {
-                $restore_file = DIR_FS_BACKUP . $specified_restore_file;
-                $extension = substr($specified_restore_file, -3);
-
-                //determine file format and unzip if needed
-                if (($extension == 'sql') || ($extension == '.gz') || ($extension == 'zip')) {
-                    switch ($extension) {
-                        case 'sql':
-                            $restore_from = $restore_file;
-                            $remove_raw = false;
-                            break;
-                        case '.gz':
-                            $restore_from = substr($restore_file, 0, -3);
-                            exec(LOCAL_EXE_GUNZIP . ' ' . $restore_file . ' -c > ' . $restore_from);
-                            $remove_raw = true;
-                            break;
-                        case 'zip':
-                            $restore_from = substr($restore_file, 0, -4);
-                            exec(LOCAL_EXE_UNZIP . ' ' . $restore_file . ' -d ' . DIR_FS_BACKUP);
-                            $remove_raw = true;
-                    }
-                }
-            } elseif ($action === 'restorelocalnow') {
-                $sql_file = new upload('sql_file', DIR_FS_BACKUP);
-                $specified_restore_file = $sql_file->filename;
-                $restore_from = DIR_FS_BACKUP . $specified_restore_file;
+        case 'deleteconfirm':
+            if (str_contains($_GET['file'], '..')) {
+                zen_redirect(zen_href_link(FILENAME_BACKUP_MYSQL, ($debug ? 'debug=ON' : '')));
             }
 
-            //Restore using "mysql"
-            $load_params = ' --database=' . DB_DATABASE;
-            $load_params .= ' --host=' . DB_SERVER;
-            $load_params .= ' --user=' . DB_SERVER_USERNAME;
-            $load_params .= ((DB_SERVER_PASSWORD === '') ? '' : ' --password=' . OS_DELIM . DB_SERVER_PASSWORD . OS_DELIM);
-            $load_params .= ' ' . DB_DATABASE; // this needs to be the 2nd-last parameter
-            $load_params .= ' < ' . OS_DELIM . $restore_from . OS_DELIM; // this needs to be the LAST parameter
-            $load_params .= ' 2>&1';
-            //DEBUG echo $mysql_exe . ' ' . $load_params;
-
-            if ($specified_restore_file !== '' && file_exists($restore_from)) {
-                $toolfilename = !empty($_GET['tool']) ? $_GET['tool'] : $mysql_exe;
-
-                //set all slashes to forward
-                $toolfilename = str_replace('\\', '/', $toolfilename);
-
-                if ($debug) {
-                    $messageStack->add_session('$toolfilename=' . $toolfilename, 'info');
+            // zen_remove does not return a value, yet...
+            /*
+                $zremove_error = zen_remove(DIR_FS_BACKUP . '/' . $_GET['file']);
+                // backwards compatibility:
+                if (isset($zen_remove_error) && $zen_remove_error == true) {
+                    $zremove_error = $zen_remove_error;
                 }
-                // remove " marks in parameters for friendlier IIS support
-//REQUIRES TESTING:          if (strstr($toolfilename,'.exe')) $load_params = str_replace('"','',$load_params);
-
-                if ($debug) {
-                    $messageStack->add_session(TEXT_COMMAND . $toolfilename . $load_params, 'info');
+                if (!$zremove_error) {
+                    $messageStack->add_session(SUCCESS_BACKUP_DELETED, 'success');
+                    zen_redirect(zen_href_link(FILENAME_BACKUP_MYSQL));
                 }
-                $resultcodes = exec($toolfilename . $load_params, $output, $load_results);
-                //$output gets filled with an array of all the normally displayed dialogue that comes back from the command, $load_results is an integer of the execution result
-                exec('exit(0)');
-
-                // parse the value that comes back from the script
-                if (zen_not_null($resultcodes)) { // what gets returned from exec() depends on the program that was run
-                    [$strA, $strB] = array_pad(explode('|', $resultcodes, 2), 2, null);
-                    if (!empty($strA)) {
-                        $messageStack->add_session('restore $resultcodes valueA: ' . $strA);
-                    }
-                    if (!empty($strB)) {
-                        $messageStack->add_session('restore $resultcodes valueB: ' . $strB);
-                    }
-                }
-
-                if ($load_results !== 0 && zen_not_null($load_results)) {
-                    $messageStack->add_session(TEXT_RESULT_CODE . $load_results);
-                }
-
-                // $output contains response strings from execution. This displays if anything is generated.
-                // $output= array(1,2,3);//to test, as nothing ever seems to come out of $output!
-                if (zen_not_null($output)) {
-                    foreach ($output as $key => $value) {
-                        $messageStack->add_session('console $output:' . "$key => $value<br>");
-                    }
-                }
-
-                if ($load_results === 0) {
-                    // store the last-restore-date, if successful. Update key if it exists rather than delete and insert or the insert increments the id
-                    $db->Execute(
-                        "INSERT INTO " . TABLE_CONFIGURATION . "
-                        (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, date_added)
-                        VALUES
-                        ('Last Database Restore', 'BACKUP_MYSQL_LAST_RESTORE', '" . $specified_restore_file . "', 'Last database restore file', 6, now())
-                        ON DUPLICATE KEY UPDATE configuration_value ='" . $specified_restore_file . "'"
-                    );
-                    $messageStack->add_session('<a href="' . ((ENABLE_SSL_ADMIN == 'true') ? DIR_WS_HTTPS_ADMIN : DIR_WS_ADMIN) . 'backups/' . $specified_restore_file . '">' . SUCCESS_DATABASE_RESTORED . '</a>', 'success');
-                } elseif ($load_results == '127') {
-                    $messageStack->add_session(FAILURE_DATABASE_NOT_RESTORED_UTIL_NOT_FOUND, 'error');
-                } else {
-                    $messageStack->add_session(FAILURE_DATABASE_NOT_RESTORED, 'error');
-                } // endif $load_results
-            } else {
-                $messageStack->add_session(sprintf(FAILURE_DATABASE_NOT_RESTORED_FILE_NOT_FOUND, '[' . $restore_from . ']'), 'error');
-            } // endif file_exists
-
+            */
+            zen_remove(DIR_FS_BACKUP . '/' . $_GET['file']);
+            $messageStack->add_session(SUCCESS_BACKUP_DELETED, 'success');
             zen_redirect(zen_href_link(FILENAME_BACKUP_MYSQL, ($debug ? 'debug=ON' : '')));
             break;
 
@@ -529,25 +532,179 @@ if (zen_not_null($action)) {
             }
             break;
 
-        case 'deleteconfirm':
-            if (str_contains($_GET['file'], '..')) {
-                zen_redirect(zen_href_link(FILENAME_BACKUP_MYSQL, ($debug ? 'debug=ON' : '')));
+        //restorelocalnow: uploads a browsed file to the backups folder and restores
+        case 'restorelocalnow':
+            $sql_file = new upload('sql_file', DIR_FS_BACKUP, '644', ['gz', 'sql', 'zip']);
+            if (!empty($sql_file->filename && file_exists(DIR_FS_BACKUP . $sql_file->filename))) {
+                $restore_file = DIR_FS_BACKUP . $sql_file->filename;
             }
 
-            // zen_remove does not return a value
-            /*
-                $zremove_error = zen_remove(DIR_FS_BACKUP . '/' . $_GET['file']);
-                // backwards compatibility:
-                if (isset($zen_remove_error) && $zen_remove_error == true) {
-                    $zremove_error = $zen_remove_error;
+        //restorenow: restores a selected file from the backup folder
+        case 'restorenow':
+
+            zen_set_time_limit(300); //needed??
+
+            if (empty($restore_file)) {
+                if (!empty($_GET['file']) && file_exists(DIR_FS_BACKUP . $_GET['file'])) {
+                    $restore_file = DIR_FS_BACKUP . $_GET['file'];
+                } else {
+                    $messageStack->add(sprintf(ERROR_RESTORE_FILE_NOT_FOUND, $restore_file), 'error');
+                    zen_redirect(zen_href_link(FILENAME_BACKUP_MYSQL, ($debug ? 'debug=ON' : '')));
                 }
-                if (!$zremove_error) {
-                    $messageStack->add_session(SUCCESS_BACKUP_DELETED, 'success');
-                    zen_redirect(zen_href_link(FILENAME_BACKUP_MYSQL));
+            }
+            $fileinfo = pathinfo(realpath($restore_file));
+
+            // determine file format and unzip if needed. Note that *.sql.gz and *.sql.zip are first extracted to *.sql and will overwrite any pre-existing *.sql with the same name.
+            if (in_array($fileinfo['extension'], ['sql', 'gz', 'zip'])) {
+
+                switch ($fileinfo['extension']) {
+
+                    case 'sql':
+                        if ($debug) {
+                            $messageStack->add('filetype=.sql', 'info');
+                        }
+                        $restore_from = $restore_file;
+                        break;
+
+                    case 'gz': // filename MUST be .sql.gz NOT just .gz
+                        if ($debug) {
+                            $messageStack->add('filetype=.gz', 'info');
+                        }
+                        // Raising this value may increase performance
+                        $buffer_size = 4096; // read 4kb at a time
+
+                        $restore_from = $fileinfo['filename']; // should be .sql (without .gz suffix)
+// Open file (in binary mode)
+                        //'r'	Open for reading only; place the file pointer at the beginning of the file.
+                        //'b' to force binary mode, which will not translate the line endings  \n to \r\n .
+                        $file = gzopen($restore_file, 'rb');
+                        //'w'	Open for writing only; place the file pointer at the beginning of the file and truncate the file to zero length. If the file does not exist, attempt to create it.
+                        $out_file = fopen($restore_from, 'wb');
+// Keep repeating until the end of the input file
+                        while (!gzeof($file)) {
+                            // Read buffer-size bytes
+                            // Both fwrite and gzread and binary-safe
+                            fwrite($out_file, gzread($file, $buffer_size));
+                        }
+// Close file
+                        fclose($out_file);
+                        gzclose($file);
+                        $delete_temp_sql_file = true;
+                        break;
+
+                    case 'zip': // filename MUST be .sql.zip NOT just .zip
+                        if ($debug) {
+                            $messageStack->add('filetype=.zip', 'info');
+                        }
+                        $zip = new ZipArchive();
+                        if ($zip->open($restore_file) === true) {
+                            $restore_from = DIR_FS_BACKUP . $zip->getNameIndex(0);//name may not be the same as the source .zip name
+                            $zip->extractTo($fileinfo['dirname']);
+                            $zip->close();
+                        } else {
+                            $messageStack->add(sprintf(ERROR_RESTORE_FILE_ZIP_NOT_OPENED, $restore_file), 'error');
+                        }
+                        $delete_temp_sql_file = true;
                 }
-            */
-            zen_remove(DIR_FS_BACKUP . '/' . $_GET['file']);
-            $messageStack->add_session(SUCCESS_BACKUP_DELETED, 'success');
+
+                //handle Maria bug with bad text at the start of file
+                //https://jira.mariadb.org/browse/MDEV-34183
+                $badLine = '/*!999999\- enable the sandbox mode */';
+                $contents = file_get_contents($restore_from);
+                $pos = strpos($contents, $badLine);
+                // The correction may fail due to a low memory limit, so increase it temporarily
+                $memory_limit_temp = '500M';
+                // Bad text found
+                if ($pos !== false) {
+                    $memory_limit_current = ini_get('memory_limit');
+                    $memory_current = rtrim($memory_limit_current, 'M');
+                    $memory_temp = rtrim($memory_limit_temp, 'M');
+                    if ($memory_current < $memory_temp) {
+                        ini_set('memory_limit', $memory_limit_temp);
+                        $contents = substr_replace($contents, '', $pos, strlen($badLine));
+                        ini_set('memory_limit', $memory_limit_current);
+                        $messageStack->add_session('<a href="https://jira.mariadb.org/browse/MDEV-34183" target="_blank">MariaDB 10.6.18 dump bug</a> detected/corrected, memory_limit was temporarily increased to ' . $memory_limit_temp . ' and restored to ' . ini_get('memory_limit'), 'info');
+                    } else {
+                        $contents = substr_replace($contents, '', $pos, strlen($badLine));
+                        $messageStack->add_session('<a href="https://jira.mariadb.org/browse/MDEV-34183" target="_blank">MariaDB 10.6.18 dump bug</a> detected/corrected');
+                    }
+                    file_put_contents($restore_from, $contents);
+                }
+                //eof Maria bug
+
+                //Restore using "mysql"
+                $load_params = ' --database=' . DB_DATABASE;
+                $load_params .= ' --host=' . DB_SERVER;
+                $load_params .= ' --user=' . DB_SERVER_USERNAME;
+                $load_params .= ((DB_SERVER_PASSWORD === '') ? '' : ' --password=' . OS_DELIM . DB_SERVER_PASSWORD . OS_DELIM);
+                $load_params .= ' ' . DB_DATABASE; // this needs to be the 2nd-last parameter
+                $load_params .= ' < ' . OS_DELIM . $restore_from . OS_DELIM; // this needs to be the LAST parameter
+                $load_params .= ' 2>&1';
+                //DEBUG echo $mysql_exe . ' ' . $load_params;
+
+                if ($restore_from !== '' && file_exists($restore_from)) {
+                    $toolfilename = !empty($_GET['tool']) ? $_GET['tool'] : $mysql_exe;
+
+                    //set all slashes to forward
+                    $toolfilename = str_replace('\\', '/', $toolfilename);
+                    if ($debug) {
+                        $messageStack->add_session('$toolfilename=' . $toolfilename, 'info');
+                    }
+                    $restore_from = str_replace('\\', '/', $restore_from);
+                    if ($debug) {
+                        $messageStack->add_session('$restore_from=' . $restore_from, 'info');
+                    }
+                    if ($debug) {
+                        $messageStack->add_session('Restore COMMAND: ' . $toolfilename . $load_params, 'info');
+                    }
+                    $resultcodes = exec($toolfilename . $load_params, $output, $load_results);
+                    // $output gets filled with an array of all the normally displayed dialogue that comes back from the command
+                    // $load_results is an integer of the execution result
+                    exec('exit(0)');
+
+                    // parse the value that comes back from the script
+                    if (zen_not_null($resultcodes)) { // what gets returned from exec() depends on the program that was run
+                        [$strA, $strB] = array_pad(explode('|', $resultcodes, 2), 2, null);
+                        if (!empty($strA)) {
+                            $messageStack->add_session('restore $resultcodes valueA: ' . $strA);
+                        }
+                        if (!empty($strB)) {
+                            $messageStack->add_session('restore $resultcodes valueB: ' . $strB);
+                        }
+                    }
+                    if ($load_results !== 0 && zen_not_null($load_results)) {
+                        $messageStack->add_session(TEXT_RESULT_CODE . $load_results);
+                    }
+
+                    // $output contains response strings from execution. This displays if anything is generated.
+                    if (zen_not_null($output)) {
+                        foreach ($output as $key => $value) {
+                            $messageStack->add_session('console $output:' . "$key => $value<br>");
+                        }
+                    }
+
+                    if ($load_results === 0) {
+                        // store the last-restore-date, if successful. Update key if it exists rather than delete and insert or the insert increments the id
+                        $db->Execute(
+                            "INSERT INTO " . TABLE_CONFIGURATION . "
+                        (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, date_added)
+                        VALUES
+                        ('Last Database Restore', 'BACKUP_MYSQL_LAST_RESTORE', '" . $restore_from . "', 'Last database restore file', 6, now())
+                        ON DUPLICATE KEY UPDATE configuration_value ='" . $restore_from . "'"
+                        );
+                        $messageStack->add_session('<a href="' . ((ENABLE_SSL_ADMIN == 'true') ? DIR_WS_HTTPS_ADMIN : DIR_WS_ADMIN) . 'backups/' . $restore_from . '">' . SUCCESS_DATABASE_RESTORED . '</a>', 'success');
+                    } elseif ($load_results == '127') {
+                        $messageStack->add_session(FAILURE_DATABASE_NOT_RESTORED_UTIL_NOT_FOUND, 'error');
+                    } else {
+                        $messageStack->add_session(FAILURE_DATABASE_NOT_RESTORED, 'error');
+                    } // endif $load_results
+                } else {
+                    $messageStack->add_session(sprintf(FAILURE_DATABASE_NOT_RESTORED_FILE_NOT_FOUND, '[' . $restore_from . ']'), 'error');
+                } // endif file_exists
+
+            } else {
+                $messageStack->add_session(sprintf(FAILURE_DATABASE_NOT_RESTORED_FILE_EXTENSION_INVALID, $restore_file), 'error');
+            }// end if not allowed extension type
             zen_redirect(zen_href_link(FILENAME_BACKUP_MYSQL, ($debug ? 'debug=ON' : '')));
             break;
     }
@@ -702,16 +859,25 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
 
                     $contents[] = ['text' => TEXT_INFO_NEW_BACKUP];
 
-                    $contents[] = ['text' => zen_draw_radio_field('compress', 'no', !@file_exists(LOCAL_EXE_GZIP) && !$compress_override) . ' ' . TEXT_INFO_USE_NO_COMPRESSION];
+                    $contents[] = [
+                        'text' => '<label>' . zen_draw_radio_field('compress', 'no', false) . ' ' . TEXT_INFO_USE_NO_COMPRESSION . '</label>'
+                    ];
 
-                    if (@file_exists(LOCAL_EXE_GZIP) || $compress_override) {
-                        $contents[] = ['text' => zen_draw_radio_field('compress', 'gzip', true) . ' ' . TEXT_INFO_USE_GZIP];
-                    }
-                    if (@file_exists(LOCAL_EXE_ZIP)) {
-                        $contents[] = ['text' => zen_draw_radio_field('compress', 'zip', !@file_exists(LOCAL_EXE_GZIP)) . ' ' . TEXT_INFO_USE_ZIP];
+                    if ($gzip_enabled || function_exists('gzcompressfile')) {
+                        $contents[] = [
+                            'text' => '<label>' . zen_draw_radio_field('compress', 'gzip', true) . ' ' . TEXT_INFO_USE_GZIP . '</label>'
+                        ];
                     }
 
-                    $contents[] = ['text' => zen_draw_radio_field('skiplocks', 'yes', false) . ' ' . TEXT_INFO_SKIP_LOCKS];
+                    if ($zip_enabled) {
+                        $contents[] = [
+                            'text' => '<label>' . zen_draw_radio_field('compress', 'zip', false) . ' ' . TEXT_INFO_USE_ZIP . '</label>'
+                        ];
+                    }
+
+                    $contents[] = [
+                        'text' => '<label>' . zen_draw_checkbox_field('skiplocks', 'yes', false) . ' ' . TEXT_INFO_SKIP_LOCKS . '</label'
+                    ];
 
                     // Download to file --- Should only be done if SSL is active, otherwise database is exposed as clear text
                     if ($dir_ok) {
@@ -731,52 +897,7 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
                     $contents[] = [
                         'align' => 'center',
                         'text' => '<button type="submit" form="backup" class="btn btn-primary" role="button">' . IMAGE_BACKUP . '</button>' . '&nbsp;&nbsp;' .
-                            '<a href="' . zen_href_link(FILENAME_BACKUP_MYSQL) . '" class="btn btn-primary" role="button">' . IMAGE_CANCEL . '</a>'
-                    ];
-                    break;
-
-                case 'restore':
-                    $heading[] = ['text' => '<strong>' . $buInfo->file . '</strong>'];
-
-                    $contents[] = ['text' => TEXT_INFO_DATE . ' ' . $buInfo->date];
-                    $contents[] = ['text' => TEXT_INFO_SIZE . ' ' . $buInfo->size];
-                    $contents[] = ['text' => TEXT_INFO_COMPRESSION . ' ' . $buInfo->compression];
-
-                    $contents[] = [
-                        'text' => zen_break_string(
-                            sprintf(TEXT_INFO_RESTORE, DIR_FS_BACKUP . (($buInfo->compression != TEXT_NO_EXTENSION) ? substr($buInfo->file, 0, strrpos($buInfo->file, '.')) : $buInfo->file), ($buInfo->compression != TEXT_NO_EXTENSION) ? TEXT_INFO_UNPACK : ''),
-                            35,
-                            ' '
-                        )
-                    ];
-
-                    // Display Restore and Cancel buttons
-                    $contents[] = [
-                        'align' => 'center',
-                        'text' => '<a class="btn btn-primary" role="button" href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'file=' . $buInfo->file . '&action=restorenow' . ($debug ? '&debug=ON' : '')) . '">' . IMAGE_RESTORE . '</a>' . '&nbsp;&nbsp' .
-                            '<a class="btn btn-primary" role="button" href="' . zen_href_link(
-                                FILENAME_BACKUP_MYSQL,
-                                'file=' . $buInfo->file . ($debug ? '&debug=ON' : '')
-                            ) . '">' . IMAGE_CANCEL . '</a>'
-                    ];
-                    break;
-
-                case 'restorelocal':
-                    $heading[] = ['text' => '<strong>' . TEXT_INFO_HEADING_RESTORE_LOCAL . '</strong>'];
-
-                    $contents = ['form' => zen_draw_form('restore', FILENAME_BACKUP_MYSQL, 'action=restorelocalnow' . ($debug ? '&debug=ON' : ''), 'post', 'enctype="multipart/form-data"')];
-                    $contents[] = ['text' => TEXT_INFO_RESTORE_LOCAL];
-                    if (!$ssl_on) {
-                        $contents[] = ['text' => '<span class="errorText">* ' . TEXT_INFO_BEST_THROUGH_HTTPS . ' *</span>'];
-                    }
-                    $contents[] = ['text' => zen_draw_file_field('sql_file')];
-                    $contents[] = ['text' => TEXT_INFO_RESTORE_LOCAL_RAW_FILE];
-
-                    //Display Restore and Cancel buttons
-                    $contents[] = [
-                        'align' => 'center',
-                        'text' => '<button type="submit" class="btn btn-primary" role="button">' . IMAGE_RESTORE . '</button>' . '&nbsp;&nbsp;' .
-                            '<a class="btn btn-primary" role="button" href="' . zen_href_link(FILENAME_BACKUP_MYSQL, ($debug ? 'debug=ON' : '')) . '">' . IMAGE_CANCEL . '</a>'
+                            '<a href="' . zen_href_link(FILENAME_BACKUP_MYSQL, ($debug ? 'debug=ON' : '')) . '" class="btn btn-primary" role="button">' . IMAGE_CANCEL . '</a>'
                     ];
                     break;
 
@@ -798,6 +919,50 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
                     ];
                     break;
 
+                case 'restore':
+                    $heading[] = ['text' => '<strong>' . $buInfo->file . '</strong>'];
+
+                    $contents[] = ['text' => TEXT_INFO_DATE . ' ' . $buInfo->date];
+                    $contents[] = ['text' => TEXT_INFO_SIZE . ' ' . $buInfo->size];
+                    $contents[] = ['text' => TEXT_INFO_COMPRESSION . ' ' . $buInfo->compression];
+
+                    $contents[] = [
+                        'text' => zen_break_string(
+                            sprintf(TEXT_INFO_RESTORE, DIR_FS_BACKUP . (($buInfo->compression != TEXT_NO_EXTENSION) ? substr($buInfo->file, 0, strrpos($buInfo->file, '.')) : $buInfo->file), ($buInfo->compression != TEXT_NO_EXTENSION) ? TEXT_INFO_UNPACK : ''),
+                            35,
+                            ' '
+                        )
+                    ];
+
+                    // Display Restore and Cancel buttons
+                    $contents[] = [
+                        'align' => 'center',
+                        'text' => '<a id="restoreNowButton" class="btn btn-primary" role="button" href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'file=' . $buInfo->file . '&action=restorenow' . ($debug ? '&debug=ON' : '')) . '">' . IMAGE_RESTORE . '</a>' . '&nbsp;&nbsp' .
+                            '<a class="btn btn-primary" role="button" href="' . zen_href_link(
+                                FILENAME_BACKUP_MYSQL,
+                                'file=' . $buInfo->file . ($debug ? '&debug=ON' : '')
+                            ) . '">' . IMAGE_CANCEL . '</a>'
+                    ];
+                    break;
+
+                case 'restorelocal':
+                    $heading[] = ['text' => '<strong>' . TEXT_INFO_HEADING_RESTORE_LOCAL . '</strong>'];
+
+                    $contents = ['form' => zen_draw_form('restore', FILENAME_BACKUP_MYSQL, 'action=restorelocalnow' . ($debug ? '&debug=ON' : ''), 'post', 'enctype="multipart/form-data"')];
+                    $contents[] = ['text' => sprintf(TEXT_INFO_RESTORE_LOCAL, ($gzip_enabled ? ', .gz' : '') . ($zip_enabled ? ', .zip' : ''))];
+                    if (!$ssl_on) {
+                        $contents[] = ['text' => '<span class="errorText">* ' . TEXT_INFO_BEST_THROUGH_HTTPS . ' *</span>'];
+                    }
+                    $contents[] = ['text' => zen_draw_file_field('sql_file')];
+
+                    //Display Restore and Cancel buttons
+                    $contents[] = [
+                        'align' => 'center',
+                        'text' => '<button id="restoreLocalNowButton" type="submit" class="btn btn-primary" role="button">' . IMAGE_RESTORE . '</button>' . '&nbsp;&nbsp;' .
+                            '<a class="btn btn-primary" role="button" href="' . zen_href_link(FILENAME_BACKUP_MYSQL, ($debug ? 'debug=ON' : '')) . '">' . IMAGE_CANCEL . '</a>'
+                    ];
+                    break;
+
                 default:
                     if (isset($buInfo) && is_object($buInfo)) {
                         $heading[] = ['text' => '<strong>' . $buInfo->file . '</strong>'];
@@ -806,10 +971,21 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
                         $contents[] = ['text' => TEXT_INFO_SIZE . ' ' . $buInfo->size];
                         $contents[] = ['text' => TEXT_INFO_COMPRESSION . ' ' . $buInfo->compression];
 
+                        // Disable restore if compression not supported
+                        $disable_restore = false;
+                        if ($buInfo->compression === 'GZIP' && !$gzip_enabled) {
+                            $contents[] = ['text' => sprintf(TEXT_RESTORE_NO_COMPRESSION_METHOD, $buInfo->compression)];
+                            $disable_restore = true;
+                        }
+                        if ($buInfo->compression === 'ZIP' && $zip_enabled) {
+                            $contents[] = ['text' => sprintf(TEXT_RESTORE_NO_COMPRESSION_METHOD, $buInfo->compression)];
+                            $disable_restore = true;
+                        }
+
                         //Display Restore and Delete buttons
                         $contents[] = [
                             'align' => 'center',
-                            'text' => '<a class="btn btn-primary" role="button" href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'file=' . $buInfo->file . '&action=restore' . ($debug ? '&debug=ON' : '')) . '">' . IMAGE_RESTORE . '</a>' . '&nbsp;&nbsp;' .
+                            'text' => '<a class="btn btn-primary" role="button"' . ($disable_restore ? '' : 'href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'file=' . $buInfo->file . '&action=restore' . ($debug ? '&debug=ON' : '')) . '"') . '>' . IMAGE_RESTORE . '</a>' . '&nbsp;&nbsp;' .
                                 (($dir_ok && !$exec_disabled) ? '<a class="btn btn-primary" role="button" href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'file=' . $buInfo->file . '&action=delete' . ($debug ? '&debug=ON' : '')) . '">' . IMAGE_DELETE . '</a>' : '')
                         ];
                     }
@@ -830,6 +1006,13 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
 <?php
 require DIR_WS_INCLUDES . 'footer.php'; ?>
 <!-- footer_eof //-->
+<?php if (defined('BACKUP_MYSQL_SERVER_NAME') && gethostname() === BACKUP_MYSQL_SERVER_NAME){ ?>
+    <script>
+        $("#restoreLocalNowButton, #restoreNowButton").on("click", function(){
+            return confirm('<?= sprintf(TEXT_WARNING_REMOTE_RESTORE, BACKUP_MYSQL_SERVER_NAME); ?>');
+        });
+    </script>
+<?php } ?>
 </body>
 </html>
 <?php

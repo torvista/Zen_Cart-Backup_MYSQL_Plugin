@@ -6,7 +6,7 @@ declare(strict_types=1);
  * @copyright Copyright 2024 Zen Cart Development Team
  * @license http://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
  * @author Dr.Byte
- * @version $Id: torvista 2024 Aug 12 $
+ * @version $Id: torvista 2024 Aug 14 $
  */
 
 $define = [
@@ -17,9 +17,12 @@ $define = [
     'ERROR_EXEC_DISABLED' => 'ERROR: Your server\'s "exec()" command has been disabled. This script cannot run. Ask your host if they are willing to re-enable PHP exec().',
     'ERROR_FILE_NOT_REMOVEABLE' => 'Error: Could not remove the file specified. You may have to use FTP to remove the file, due to a server-permissions configuration limitation.',
     'ERROR_PHP_DISABLED_FUNCTIONS' => 'PHP-Disabled Functions: ',
+    'ERROR_RESTORE_FILE_NOT_FOUND' => 'Restore file "%s" not found.',
+    'ERROR_RESTORE_FILE_ZIP_NOT_OPENED' => 'Restore file "%s" could not be unzipped.',
     'ERROR_SHELL_EXEC_DISABLED' => 'Unix cannot auto-detect the path to mysql as the "shell_exec()" function has been disabled: checking paths hard-coded in script...',
     'FAILURE_BACKUP_FAILED_CHECK_PERMISSIONS' => 'The backup failed because there was an error starting the backup program (mysqldump or mysqldump.exe).<br>If running on Windows Server, you may need to alter permissions on cmd.exe to allow Special Access to the Internet Guest Account to read/execute.<br>You should talk to your webhost about why exec() commands are failing when attempting to run the mysqldump binary/program.',
     'FAILURE_DATABASE_NOT_RESTORED' => 'Failure: The database may NOT have been restored properly. Please check it carefully.',
+    'FAILURE_DATABASE_NOT_RESTORED_FILE_EXTENSION_INVALID' => 'File extension is not one of the allowed types (.sql, .gz, .zip).',
     'FAILURE_DATABASE_NOT_RESTORED_FILE_NOT_FOUND' => 'Failure: The database was NOT restored.  ERROR: FILE NOT FOUND: %s',
     'FAILURE_DATABASE_NOT_RESTORED_UTIL_NOT_FOUND' => 'ERROR: Could not locate the MYSQL restore utility. RESTORE FAILED.',
     'FAILURE_DATABASE_NOT_SAVED' => 'Failure: The database has NOT been saved.',
@@ -37,15 +40,10 @@ $define = [
     'TABLE_HEADING_FILE_SIZE' => 'Size',
     'TABLE_HEADING_TITLE' => 'Title',
     'TEXT_ADD_SUFFIX' => 'Add an optional suffix to the filename (ascii characters only):',
-    'TEXT_AUTO_DETECTED_PATH' => 'Auto-Detected path to check: (%1$s), %2$s',
     'TEXT_BACKUP_DIRECTORY' => 'Backup Directory:',
-    'TEXT_BACKUP_DIRECTORY_OK' => 'Backup Directory: "'. DIR_FS_BACKUP .'" valid.',
-    'TEXT_CHECK_PATH' => 'Checking Path: ',
     'TEXT_COMMAND_RUN' =>'<br>The command being run is: ',
-    'TEXT_COMMAND' => 'Command: ',
     'TEXT_DELETE_INTRO' => 'Are you sure you want to delete this backup?',
     'TEXT_EXECUTABLES_FOUND' => 'MySQL tools found:<br>%1$s<br>%2$s',
-    'TEXT_EXECUTABLES_FOUND_DB' => 'MySQL tools found from DB constant:"%s"',
     'TEXT_EXECUTABLES_NOT_FOUND' => 'MySQL tools (mysql, mysqldump) not found.',
     'TEXT_FORGET' => '(forget)',
     'TEXT_INFO_BEST_THROUGH_HTTPS' => 'This is safer via a secured HTTPS connection!',
@@ -56,8 +54,7 @@ $define = [
     'TEXT_INFO_HEADING_RESTORE_LOCAL' => 'Restore from a Local file',
     'TEXT_INFO_NEW_BACKUP' => 'Do not interrupt the backup process which might take a couple of minutes.',
     'TEXT_INFO_RESTORE' => 'Do not interrupt the restoration process.<br><br>The larger the backup, the longer this process takes!<br><br>If possible, use the mysql client.<br><br>For example:<br><br><b>mysql -h' . DB_SERVER . ' -u' . DB_SERVER_USERNAME . ' -p ' . DB_DATABASE . ' < %s </b> %s',
-    'TEXT_INFO_RESTORE_LOCAL' => 'Do not interrupt the restoration process.<br><br>The larger the backup, the longer this process takes!',
-    'TEXT_INFO_RESTORE_LOCAL_RAW_FILE' => 'The file uploaded must be a raw sql (text) file.',
+    'TEXT_INFO_RESTORE_LOCAL' => 'Do not interrupt the restoration process.<br><br>The larger the backup, the longer this process takes!<br><br>The file uploaded must be .sql%s.',
     'TEXT_INFO_SIZE' => 'Size:',
     'TEXT_INFO_SKIP_LOCKS' => 'Skip Lock option (check this if you get a LOCK TABLES permissions error)',
     'TEXT_INFO_UNPACK' => '<br><br>(after unpacking the file from the archive)',
@@ -67,6 +64,8 @@ $define = [
     'TEXT_LAST_RESTORATION' => 'Last Restoration:',
     'TEXT_NO_EXTENSION' => 'None',
     'TEXT_RESULT_CODE' => 'Result code: ',
+    'TEXT_RESTORE_NO_COMPRESSION_METHOD' => '<strong>%s</strong> not supported for Restore.',
+    'TEXT_WARNING_REMOTE_RESTORE' => 'You appear to be restoring to the PRODUCTION site (<strong>%s</strong>): are you SURE?',
     'WARNING_NOT_SECURE_FOR_DOWNLOADS' => '<span class="errorText">NOTE: You do not have SSL enabled. Any downloads you do from this page will not be encrypted. Doing backups and restores will be fine, but download/upload of files from/to the server presents a security risk.',
 ];
 
