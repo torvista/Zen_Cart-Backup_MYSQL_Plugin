@@ -99,7 +99,7 @@ $resultcodes = '';
 $strA = '';
 $strB = '';
 
-$debug = isset($_GET['debug']) && (strtoupper($_GET['debug']) ===  'ON' || (int)$_GET['debug'] === 1);
+$debug = isset($_GET['debug']) && (strtoupper($_GET['debug']) === 'ON' || (int)$_GET['debug'] === 1);
 
 $tables_to_export = !empty($_GET['tables']) ? str_replace(',', ' ', $_GET['tables']) : '';
 $redirect = !empty($_GET['returnto']) ? $_GET['returnto'] : '';
@@ -121,7 +121,7 @@ if (is_dir(DIR_FS_BACKUP)) {
     $messageStack->add(ERROR_BACKUP_DIRECTORY_DOES_NOT_EXIST . ': ' . DIR_FS_BACKUP);
 }
 if ($debug && $dir_ok) {
-    $messageStack->add('Backup Directory: "'. DIR_FS_BACKUP .'" valid.', 'success');
+    $messageStack->add('Backup Directory: "' . DIR_FS_BACKUP . '" valid.', 'success');
 }
 // check to see if open_basedir restrictions in effect -- if so, likely won't be able to use this tool.
 $flag_basedir = false;
@@ -182,7 +182,7 @@ if (defined('BACKUP_MYSQL_LOCATION')) {
 if (defined('BACKUP_MYSQL_LOCATION') && ($mysql_exe !== 'unknown' && $mysqldump_exe !== 'unknown')) {
     $path_found = BACKUP_MYSQL_LOCATION;
     if ($debug) {
-        $messageStack->add('MySQL tools found from BACKUP_MYSQL_LOCATION: $mysql_exe="' . $mysql_exe . '", $mysqldump_exe="' .  $mysqldump_exe . '"', 'success');
+        $messageStack->add('MySQL tools found from BACKUP_MYSQL_LOCATION: $mysql_exe="' . $mysql_exe . '", $mysqldump_exe="' . $mysqldump_exe . '"', 'success');
     }
 // or, if DB constant is not valid
 } else {
@@ -281,7 +281,7 @@ if (defined('BACKUP_MYSQL_LOCATION') && ($mysql_exe !== 'unknown' && $mysqldump_
 
 if (($shell_exec_disabled || $debug) && !empty($path_found)) {
     if ($debug) {
-        $messageStack->add('MySQL tools found: $mysql_exe="' . $mysql_exe . '", $mysqldump_exe="' .  $mysqldump_exe . '"', 'success');
+        $messageStack->add('MySQL tools found: $mysql_exe="' . $mysql_exe . '", $mysqldump_exe="' . $mysqldump_exe . '"', 'success');
     }
     //store path in db
     $db->Execute(
@@ -556,9 +556,7 @@ if (zen_not_null($action)) {
 
             // determine file format and unzip if needed. Note that *.sql.gz and *.sql.zip are first extracted to *.sql and will overwrite any pre-existing *.sql with the same name.
             if (in_array($fileinfo['extension'], ['sql', 'gz', 'zip'])) {
-
                 switch ($fileinfo['extension']) {
-
                     case 'sql':
                         if ($debug) {
                             $messageStack->add('filetype=.sql', 'info');
@@ -607,28 +605,24 @@ if (zen_not_null($action)) {
                         $delete_temp_sql_file = true;
                 }
 
-                //handle Maria bug with bad text at the start of file
-                //https://jira.mariadb.org/browse/MDEV-34183
-                $badLine = '/*!999999\- enable the sandbox mode */';
-                $contents = file_get_contents($restore_from);
-                $pos = strpos($contents, $badLine);
-                // The correction may fail due to a low memory limit, so increase it temporarily
-                $memory_limit_temp = '500M';
-                // Bad text found
-                if ($pos !== false) {
-                    $memory_limit_current = ini_get('memory_limit');
-                    $memory_current = rtrim($memory_limit_current, 'M');
-                    $memory_temp = rtrim($memory_limit_temp, 'M');
-                    if ($memory_current < $memory_temp) {
-                        ini_set('memory_limit', $memory_limit_temp);
-                        $contents = substr_replace($contents, '', $pos, strlen($badLine));
-                        ini_set('memory_limit', $memory_limit_current);
-                        $messageStack->add_session('<a href="https://jira.mariadb.org/browse/MDEV-34183" target="_blank">MariaDB 10.6.18 dump bug</a> detected/corrected, memory_limit was temporarily increased to ' . $memory_limit_temp . ' and restored to ' . ini_get('memory_limit'), 'info');
-                    } else {
-                        $contents = substr_replace($contents, '', $pos, strlen($badLine));
-                        $messageStack->add_session('<a href="https://jira.mariadb.org/browse/MDEV-34183" target="_blank">MariaDB 10.6.18 dump bug</a> detected/corrected');
-                    }
+                //handle MariaDB compatibility problem
+                //https://mariadb.org/mariadb-dump-file-compatibility-change/
+                //example problem lines: /*!999999\- enable the sandbox mode */  and  /*M!999999\- enable the sandbox mode */
+                $db_server_info = $db->get_server_info(); //e.g. "11.3.1-MariaDB-log"
+                if ($pos = strpos($db_server_info, 'MariaDB')) {
+                    //MariaDB info may have various suffixes
+                    $db_server_info = substr($db_server_info, 0, $pos+7);
+                    $db_maria_version = substr($db_server_info, 0, $pos-1);
+                }
+                //affects MariaDB <11.4 and all Mysql clients
+                if (!str_contains($db_server_info, 'MariaDB') || version_compare($db_server_info, '11.4-MariaDB' ) === -1) {
+                    $contents = file_get_contents($restore_from);
+                    $contents = preg_replace('#/*.+enable the sandbox mode.+#', '', $contents, -1, $countBad);
                     file_put_contents($restore_from, $contents);
+                    if ($countBad > 0) {
+                        $messageStack->add_session('<a href="https://mariadb.org/mariadb-dump-file-compatibility-change" target="_blank">MariaDB dump compatibility bug</a> detected/corrected: ' .
+                        ($pos ? 'you should update your MariaDB (currently ' .  $db_maria_version . ') to version 11.4 or above.' : 'this affects all MySQL clients (but not MariaDB 11.4 and above.'));
+                    }
                 }
                 //eof Maria bug
 
@@ -1006,13 +1000,15 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
 <?php
 require DIR_WS_INCLUDES . 'footer.php'; ?>
 <!-- footer_eof //-->
-<?php if (defined('BACKUP_MYSQL_SERVER_NAME') && gethostname() === BACKUP_MYSQL_SERVER_NAME){ ?>
+<?php
+if (defined('BACKUP_MYSQL_SERVER_NAME') && gethostname() === BACKUP_MYSQL_SERVER_NAME) { ?>
     <script>
-        $("#restoreLocalNowButton, #restoreNowButton").on("click", function(){
+        $("#restoreLocalNowButton, #restoreNowButton").on("click", function () {
             return confirm('<?= sprintf(TEXT_WARNING_REMOTE_RESTORE, BACKUP_MYSQL_SERVER_NAME); ?>');
         });
     </script>
-<?php } ?>
+<?php
+} ?>
 </body>
 </html>
 <?php
