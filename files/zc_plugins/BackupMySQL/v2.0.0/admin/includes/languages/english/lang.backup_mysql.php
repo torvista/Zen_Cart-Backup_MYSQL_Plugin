@@ -32,7 +32,7 @@ $define = [
     'IMAGE_BACKUP' => 'Backup',
     'IMAGE_RESTORE' => 'Restore',
     'SUCCESS_BACKUP_DELETED' => 'Success: The backup has been removed.',
-    'SUCCESS_DATABASE_RESTORED' => 'Success: The database has been restored.',
+    'SUCCESS_DATABASE_RESTORED' => 'Success: The database has been restored from "%s".',
     'SUCCESS_DATABASE_SAVED' => 'Success: The database has been saved.',
     'SUCCESS_LAST_RESTORE_CLEARED' => 'Success: The last restoration date has been cleared.',
     'TABLE_HEADING_ACTION' => 'Action',
@@ -65,6 +65,8 @@ $define = [
     'TEXT_NO_EXTENSION' => 'None',
     'TEXT_RESULT_CODE' => 'Result code: ',
     'TEXT_RESTORE_NO_COMPRESSION_METHOD' => '<strong>%s</strong> not supported for Restore.',
+    'TEXT_TEMP_SQL_DELETED' => 'Temporary file "%s" deleted',
+    'TEXT_TEMP_SQL_NOT_DELETED' => 'Temporary file "%s" NOT deleted',
     'TEXT_WARNING_REMOTE_RESTORE' => 'You appear to be restoring to the PRODUCTION site (<strong>%s</strong>): are you SURE?',
     'WARNING_NOT_SECURE_FOR_DOWNLOADS' => '<span class="errorText">NOTE: You do not have SSL enabled. Any downloads you do from this page will not be encrypted. Doing backups and restores will be fine, but download/upload of files from/to the server presents a security risk.',
 ];

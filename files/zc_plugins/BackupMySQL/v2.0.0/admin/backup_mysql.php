@@ -416,35 +416,17 @@ if (zen_not_null($action)) {
                 $messageStack->add_session(FAILURE_DATABASE_NOT_SAVED, 'error');
             }
 
-            //compress the file as requested & optionally download
-            /*
-                   if (file_exists(DIR_FS_BACKUP . $backup_file)) {
-                       echo 'FOUND DIR_FS_BACKUP.$backup_file=' . DIR_FS_BACKUP . $backup_file;
-                   } else{
-                       echo 'NOT FOUND DIR_FS_BACKUP.$backup_file=' . DIR_FS_BACKUP . $backup_file;
-                   }die;
-   */
             if (file_exists(DIR_FS_BACKUP . $backup_file)) {
                 switch ($_POST['compress']) {
                     case 'gzip':
-                        //@exec(LOCAL_EXE_GZIP . ' ' . DIR_FS_BACKUP . $backup_file);
-                        //$backup_file .= '.gz';
-
                         $gzipped_filename = gzcompressfile(DIR_FS_BACKUP . $backup_file);
                         //successful compression
                         if ($gzipped_filename = DIR_FS_BACKUP . $backup_file . '.gz') {
                             unlink(DIR_FS_BACKUP . $backup_file);
-                            $backup_file .= '.gz'; //add extension to name
                         }
                         break;
 
                     case 'zip':
-                        /*@exec(LOCAL_EXE_ZIP . ' -j ' . DIR_FS_BACKUP . $backup_file . '.zip ' . DIR_FS_BACKUP . $backup_file);
-                        if (file_exists(DIR_FS_BACKUP . $backup_file) && file_exists(DIR_FS_BACKUP . $backup_file . 'zip')) {
-                            unlink(DIR_FS_BACKUP . $backup_file);
-                        }
-                        $backup_file .= '.zip';*/
-
                         $zip = new ZipArchive();
                         $zipped_file = DIR_FS_BACKUP . $backup_file . '.zip';
                         if ($zip->open($zipped_file, ZipArchive::CREATE) !== true) {
@@ -510,6 +492,7 @@ if (zen_not_null($action)) {
                     zen_redirect(zen_href_link(FILENAME_BACKUP_MYSQL));
                 }
             */
+
             zen_remove(DIR_FS_BACKUP . '/' . $_GET['file']);
             $messageStack->add_session(SUCCESS_BACKUP_DELETED, 'success');
             zen_redirect(zen_href_link(FILENAME_BACKUP_MYSQL, ($debug ? 'debug=ON' : '')));
@@ -554,74 +537,102 @@ if (zen_not_null($action)) {
             }
             $fileinfo = pathinfo(realpath($restore_file));
 
-            // determine file format and unzip if needed. Note that *.sql.gz and *.sql.zip are first extracted to *.sql and will overwrite any pre-existing *.sql with the same name.
+            // determine file format and unzip if needed. Note that *.sql.gz and *.sql.zip are first extracted to a temporary file.
             if (in_array($fileinfo['extension'], ['sql', 'gz', 'zip'])) {
+                $tempfile_name = '';
+
                 switch ($fileinfo['extension']) {
                     case 'sql':
                         if ($debug) {
-                            $messageStack->add('filetype=.sql', 'info');
+                            $messageStack->add_session('source filetype=.sql', 'info');
                         }
                         $restore_from = $restore_file;
                         break;
 
                     case 'gz': // filename MUST be .sql.gz NOT just .gz
                         if ($debug) {
-                            $messageStack->add('filetype=.gz', 'info');
+                            $messageStack->add_session('source filetype=.gz', 'info');
                         }
                         // Raising this value may increase performance
                         $buffer_size = 4096; // read 4kb at a time
 
-                        $restore_from = $fileinfo['filename']; // should be .sql (without .gz suffix)
-// Open file (in binary mode)
-                        //'r'	Open for reading only; place the file pointer at the beginning of the file.
-                        //'b' to force binary mode, which will not translate the line endings  \n to \r\n .
-                        $file = gzopen($restore_file, 'rb');
+                        // Open .gz file (in binary mode)
+                        // 'r': open for reading only; place the file pointer at the beginning of the file.
+                        // 'b': to force binary mode, which will not translate the line endings  \n to \r\n .
+                        $file_gz = gzopen($restore_file, 'rb');
+
+                        //create a temporary file
+                        $tempfile = tmpfile();
                         //'w'	Open for writing only; place the file pointer at the beginning of the file and truncate the file to zero length. If the file does not exist, attempt to create it.
-                        $out_file = fopen($restore_from, 'wb');
-// Keep repeating until the end of the input file
-                        while (!gzeof($file)) {
+                        //fwrite($tempfile, 'wb');
+
+                        // parse the source file
+                        while (!gzeof($file_gz)) {
                             // Read buffer-size bytes
                             // Both fwrite and gzread and binary-safe
-                            fwrite($out_file, gzread($file, $buffer_size));
+                            fwrite($tempfile, gzread($file_gz, $buffer_size));
                         }
-// Close file
-                        fclose($out_file);
-                        gzclose($file);
-                        $delete_temp_sql_file = true;
+                        // close source file
+                        gzclose($file_gz);
+
+                        // get temp file details
+                        $tempfile_meta_data = stream_get_meta_data($tempfile);
+                        $tempfile_name = $tempfile_meta_data["uri"];
+                        $restore_from = $tempfile_name;
                         break;
 
                     case 'zip': // filename MUST be .sql.zip NOT just .zip
                         if ($debug) {
-                            $messageStack->add('filetype=.zip', 'info');
+                            $messageStack->add_session('source filetype=.zip', 'info');
                         }
+
+                        $temp_directory = sys_get_temp_dir();
                         $zip = new ZipArchive();
                         if ($zip->open($restore_file) === true) {
-                            $restore_from = DIR_FS_BACKUP . $zip->getNameIndex(0);//name may not be the same as the source .zip name
-                            $zip->extractTo($fileinfo['dirname']);
+                            $zip->extractTo($temp_directory);
+                            $tempfile_name = $temp_directory . '/' . $zip->getNameIndex(0);//name may not be the same as the source .zip name
+                            $restore_from = $tempfile_name;
                             $zip->close();
                         } else {
                             $messageStack->add(sprintf(ERROR_RESTORE_FILE_ZIP_NOT_OPENED, $restore_file), 'error');
                         }
-                        $delete_temp_sql_file = true;
                 }
 
                 //handle MariaDB compatibility problem
                 //https://mariadb.org/mariadb-dump-file-compatibility-change/
-                //example problem lines: /*!999999\- enable the sandbox mode */  and  /*M!999999\- enable the sandbox mode */
                 $db_server_info = $db->get_server_info(); //e.g. "11.3.1-MariaDB-log"
                 if ($pos = strpos($db_server_info, 'MariaDB')) {
                     //MariaDB info may have various suffixes
-                    $db_server_info = substr($db_server_info, 0, $pos+7);
-                    $db_maria_version = substr($db_server_info, 0, $pos-1);
+                    $db_server_info = substr($db_server_info, 0, $pos + 7);
+                    $db_maria_version = substr($db_server_info, 0, $pos - 1);
                 }
                 //affects MariaDB <11.4 and all Mysql clients
-                if (!str_contains($db_server_info, 'MariaDB') || version_compare($db_server_info, '11.4-MariaDB' ) === -1) {
+                if (!str_contains($db_server_info, 'MariaDB') || version_compare($db_server_info, '11.4-MariaDB') === -1) {
                     $contents = file_get_contents($restore_from);
-                    $contents = preg_replace('#/*.+enable the sandbox mode.+#', '', $contents, -1, $countBad);
-                    file_put_contents($restore_from, $contents);
-                    if ($countBad > 0) {
-                        $messageStack->add_session('<a href="https://mariadb.org/mariadb-dump-file-compatibility-change" target="_blank">MariaDB dump compatibility bug</a> detected/corrected: ' .
-                        ($pos ? 'you should update your MariaDB (currently ' .  $db_maria_version . ') to version 11.4 or above.' : 'this affects all MySQL clients (but not MariaDB 11.4 and above.'));
+                    //preg_replace returns null if it fails:https://www.myintervals.com/blog/2008/01/25/wtf-preg_replace-returns-null/ due to the string being too long
+                    //$contents = preg_replace('/\/*.+enable the sandbox mode.+/gu', '', $contents, -1, $countBad);
+
+                    //example problem lines: /*!999999\- enable the sandbox mode */  and  /*M!999999\- enable the sandbox mode */
+                    $problem_strings = ['/*!999999\- enable the sandbox mode */', '/*M!999999\- enable the sandbox mode */'];
+
+                    foreach ($problem_strings as $problem_string) {
+                        $contents = str_replace($problem_string, '', $contents, $countBad);
+                        if ($countBad > 0) {
+                            //create a temporary file
+                            $tempfile = tmpfile();
+                            fwrite($tempfile, $contents);
+
+                            // get temp file details
+                            $tempfile_meta_data = stream_get_meta_data($tempfile);
+                            $tempfile_name = $tempfile_meta_data["uri"];
+                            $restore_from = $tempfile_name;
+
+                            $messageStack->add_session(
+                                '<a href="https://mariadb.org/mariadb-dump-file-compatibility-change" target="_blank">MariaDB dump compatibility bug</a> detected/corrected: ' .
+                                ($pos ? 'you should update your MariaDB (currently ' . $db_maria_version . ') to version 11.4 or above.' : 'this affects all MySQL clients (but not MariaDB 11.4 and above.')
+                            );
+                            break;
+                        }
                     }
                 }
                 //eof Maria bug
@@ -686,7 +697,26 @@ if (zen_not_null($action)) {
                         ('Last Database Restore', 'BACKUP_MYSQL_LAST_RESTORE', '" . $restore_from . "', 'Last database restore file', 6, now())
                         ON DUPLICATE KEY UPDATE configuration_value ='" . $restore_from . "'"
                         );
-                        $messageStack->add_session('<a href="' . ((ENABLE_SSL_ADMIN == 'true') ? DIR_WS_HTTPS_ADMIN : DIR_WS_ADMIN) . 'backups/' . $restore_from . '">' . SUCCESS_DATABASE_RESTORED . '</a>', 'success');
+
+                        // was a temp file used from a compressed (.zip, .gz) file
+                        if (file_exists($tempfile_name)) {
+                            $restore_file_info = $restore_file . " ($tempfile_name)";
+                            if (isset($tempfile) && is_resource($tempfile)) {
+                                // close and delete the temp file used for gz
+                                fclose($tempfile);
+                            } else {
+                                unlink($tempfile_name);
+                            }
+                            $messageStack->add_session(!file_exists($tempfile_name) ? sprintf(TEXT_TEMP_SQL_DELETED, $restore_from) : sprintf(TEXT_TEMP_SQL_NOT_DELETED, $tempfile_name), !file_exists($tempfile_name) ? 'success' : 'error');
+                        } else {
+                            $restore_file_info = $restore_from;
+                        }
+
+                        $messageStack->add_session(sprintf(SUCCESS_DATABASE_RESTORED, $restore_file_info), 'success');
+
+                        // a redirect back after completion does not work
+                        //zen_redirect(zen_href_link(FILENAME_BACKUP_MYSQL, ($debug ? 'debug=ON' : '')));
+
                     } elseif ($load_results == '127') {
                         $messageStack->add_session(FAILURE_DATABASE_NOT_RESTORED_UTIL_NOT_FOUND, 'error');
                     } else {
@@ -752,10 +782,10 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
                 $dir = dir(DIR_FS_BACKUP);
                 $contents = [];
                 // build array of files in backup directory
-                while ($file = $dir->read()) {
-                    if (!is_dir(DIR_FS_BACKUP . $file)) {
-                        if (!str_starts_with($file, '.') && !in_array($file, ['empty.txt', 'index.php', 'index.htm', 'index.html'])) {
-                            $contents[] = $file;
+                while ($file_gz = $dir->read()) {
+                    if (!is_dir(DIR_FS_BACKUP . $file_gz)) {
+                        if (!str_starts_with($file_gz, '.') && !in_array($file_gz, ['empty.txt', 'index.php', 'index.htm', 'index.html'])) {
+                            $contents[] = $file_gz;
                         }
                     }
                 }
