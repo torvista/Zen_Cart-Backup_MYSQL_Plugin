@@ -80,6 +80,8 @@ Features:
 * auto-finds the mysql executables (stores result in db so does not run auto-find every time).
 * allow a suffix to be added to the backup filename  
 * allow gzip and zip compression for backup and restore
+* use temporary files for extractions/compression
+* handle a MariaDB incompatibility bug with some dump files
 
 misc:  
 move Last Restored and buttons outside file list table 
