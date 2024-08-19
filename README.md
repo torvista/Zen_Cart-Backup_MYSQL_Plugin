@@ -1,5 +1,11 @@
 # Zen Cart - Backup MYSQL Plugin v2.0
-This add-on works much faster than a php-scripted backup tool and supports backups of "huge" databases.
+
+*August 2024: This fileset is now very different to the last version in the Zen Cart Plugins, but will not be uploaded there until there is some feedback from users.*
+
+Backup/Restore your database from the Zen Cart Admin.  
+Use for backup security or for fast and easy restores to your development server.
+
+This add-on works much faster than a php-scripted backup tool and supports backups of "huge" databases. Supports zip and gzip in unix and Windows servers.
 
 Created by: DrByte  
 Donations:  Please support Zen Cart!  paypal@zen-cart.com  - Thank you!
