@@ -1,4 +1,4 @@
-# Zen Cart - Backup MYSQL Plugin
+# Zen Cart - Backup MYSQL Plugin v2.0
 This add-on works much faster than a php-scripted backup tool and supports backups of "huge" databases.
 
 Created by: DrByte  
@@ -21,13 +21,20 @@ Does not work on GoDaddy servers or other servers where the database is hosted o
 
 ## Installation
 1. Copy all the files from */files/zc_plugins/* to your development site for testing before copying to your production server.
-2. Admin->Modules->Plugin Manager->Select the plugin and Install it.
-
+1. Admin->Modules->Plugin Manager->Select the plugin and Install it.  
 Note that to perform backups, your */ADMIN_FOLDER/backups* folder must be 
-writable by the webserver userID. This is usually best accomplished 
+writable by the webserver userID.  
+This is usually best accomplished 
 by CHMOD 777 on the */ADMIN_FOLDER/backups* folder, either by shell console 
 or by FTP program. CHMOD777 means read/write/execute permissions for everyone.
 Some servers don't permit use of 777 (blank screen or 500 error), in which case 755 will be required.
+
+1. There is an optional define you may enable in  
+/admin/includes/extra_datafiles/backup_mysql.php  
+
+		//define('BACKUP_MYSQL_SERVER_NAME', 'YOUR_SERVER_NAME');  
+in which you may put the name of your production server  (use the name that is shown in the Admin header in front of the timezone).  
+This will allow a popup warning if you try to restore to that production server instead of your local development server.
 
 ## Use
 Admin->Tools->MySQL Database Backup-Restore
@@ -51,9 +58,11 @@ Add this to the end of the .htaccess file:
 	</FilesMatch>
 
 ## Info
-This tool looks for the mysql binary tools "mysql" and "mysqldump" to
-perform imports/exports.
-If for some reason it's not finding the tools properly, you can edit the file  
+This tool looks for the mysql binary tools "mysql" and "mysqldump" to perform imports/exports.
+
+There is a great deal of debugging output available by adding &debug=1 to the url.
+
+If for some reason it's not finding the tools automatically, you can edit the file  
 /admin/includes/extra_datafiles/backup_mysql.php  
 and specify the correct path to these utilities for your server, by defining the LOCAL_EXE_MYSQL and LOCAL_EXE_MYSQLDUMP constants.
 
@@ -63,30 +72,21 @@ In many cases, Windows servers will prevent the use of exec() commands by virtue
 To override this, you would need to alter the security permissions on cmd.exe and grant the Internet Guest Account read/execute as "Special Access" permissions.  
 NOTE: This may be a security risk to your server, so it's best to consult with your security expert before making such a change.
 
-## TODO
-1. Sort out parsing of possible tool locations.
-1. Fix detection and use of compression options.
-admin\includes\extra_datafiles\backup_mysql.php  
-Review this  
-
-		// Set this to true if the zip options aren't appearing while doing a backup, and you are certain that gzip support exists on your server  
-		define('COMPRESS_OVERRIDE',false);  
-		//define('COMPRESS_OVERRIDE',true);  
-1. Fix delimiters for Windows/Unix with extended Ascii characters in passwords.
-1. review $_GET['returnto'] (not used)
-1. Add stuff I've done in my own version that's too complicated to merge easily.
-
 ## Changelog
-2024 08 torvista  
-features: add suffix to backup filename  
-misc fettling: formatting, use short echo tags, remove unused td of download icon, remove unused row hover effect, remove br tags from infobox, add th tags to table, simplifications (use str_starts_with, str_ends with etc., use of $dir_ok, $exec_disabled, unnecessary clauses), disable check for return value of zen_remove, use CSS buttons, use Kb for size, simplify use of $debug, strict comparisons, SSL warnings, use constant BACKUP_MYSQL_LAST_RESTORED, add $debug to all buttons to persist.
+2024 08 torvista: incorporation of custom code from years of endless fettling.
 
-Converted to encapsulated plugin.  
-move Last Restored and buttons outside file list table  
-remove/replace obsolete html4 tags, br / to br, replaced nested table structure with divs, use null coalesce, short array syntax  
-use admin html_head  
-Moved tool locations defines to extra_datafiles.  
-Converted language file to lang. format, alpha-sort constants
+Features:  
+* converted to an encapsulated plugin  
+* auto-finds the mysql executables (stores result in db so does not run auto-find every time).
+* allow a suffix to be added to the backup filename  
+* allow gzip and zip compression for backup and restore
+* use temporary files for extractions/compression
+* handle a MariaDB incompatibility bug with some dump files
+
+misc:  
+move Last Restored and buttons outside file list table 
+remove/replace obsolete html4 tags, br / to br, replaced nested table structure with divs, use null coalesce, short array syntax, use admin html_head, 
+moved tool locations defines to extra_datafiles, converted language file to lang. format, alpha-sort constants, formatting, use short echo tags, remove unused td of download icon, remove unused row hover effect, remove br tags from infobox, add th tags to table, simplifications (use str_starts_with, str_ends with etc., use of $dir_ok, $exec_disabled, unnecessary clauses), disable check for return value of zen_remove, use CSS buttons, use Kb for size, simplify use of $debug, strict comparisons, SSL warnings, use constant BACKUP_MYSQL_LAST_RESTORED, make $debug parameter  persist on all buttons, different quote styles used for Windows/Unix (fixes problem with some passwords), endless debugging output.
 
 July 2020 - Fixed warnings about undefined constants. Fixed undefined offset during restores.  
 June 2020 - Fixed Warning: "continue" targeting switch is equivalent to "break". Did you mean to use "continue 2"? in backup_mysql.php on line 518 $mprough  
