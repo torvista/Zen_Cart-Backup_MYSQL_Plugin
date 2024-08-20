@@ -1,5 +1,11 @@
 # Zen Cart - Backup MYSQL Plugin v2.0
-This add-on works much faster than a php-scripted backup tool and supports backups of "huge" databases.
+
+*August 2024: This fileset is now very different to the last version in the Zen Cart Plugins, but will not be uploaded there until there is some feedback from users.*
+
+Backup/Restore your database from the Zen Cart Admin.  
+Use for backup security or for fast and easy restores to your development server.
+
+This add-on works much faster than a php-scripted backup tool and supports backups of "huge" databases. Supports zip and gzip in unix and Windows servers.
 
 Created by: DrByte  
 Donations:  Please support Zen Cart!  paypal@zen-cart.com  - Thank you!
@@ -71,6 +77,9 @@ Windows servers may require this.... but some detection is already built-in for 
 In many cases, Windows servers will prevent the use of exec() commands by virtue of the fact that Windows restricts the Internet Guest Account from being allowed to run cmd.exe.  
 To override this, you would need to alter the security permissions on cmd.exe and grant the Internet Guest Account read/execute as "Special Access" permissions.  
 NOTE: This may be a security risk to your server, so it's best to consult with your security expert before making such a change.
+
+## Why is this plugin not included with Zen Cart?
+https://github.com/zencart/zencart/issues/3050
 
 ## Changelog
 2024 08 torvista: incorporation of custom code from years of endless fettling.
