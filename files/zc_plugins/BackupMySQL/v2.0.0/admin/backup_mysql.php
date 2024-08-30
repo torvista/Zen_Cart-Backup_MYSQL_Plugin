@@ -423,6 +423,7 @@ if (zen_not_null($action)) {
                         //successful compression
                         if ($gzipped_filename = DIR_FS_BACKUP . $backup_file . '.gz') {
                             unlink(DIR_FS_BACKUP . $backup_file);
+                            $backup_file = $backup_file . '.gz';
                         }
                         break;
 
