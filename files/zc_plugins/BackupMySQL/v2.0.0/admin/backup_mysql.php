@@ -6,7 +6,7 @@ declare(strict_types=1);
  * @copyright Copyright 2024 Zen Cart Development Team
  * @license http://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
  * @author Dr.Byte
- * @version $Id: torvista 2024 Aug 14 $
+ * @version $Id: torvista 2024 Aug 30 $
  */
 
 /** for phpStorm
@@ -147,7 +147,7 @@ if (in_array('exec', explode(",", str_replace(' ', '', $php_disabled_functions))
     $exec_disabled = true;
 }
 if (!$os_win && in_array('shell_exec', explode(",", str_replace(' ', '', $php_disabled_functions)), true)) {
-    //$messageStack->add(ERROR_SHELL_EXEC_DISABLED, 'error');//shell_exec only used on Unix to find mysql: show error later
+    //$messageStack→add(ERROR_SHELL_EXEC_DISABLED, 'error');//shell_exec only used on Unix to find mysql: show error later
     $shell_exec_disabled = true;
 }
 if ($exec_disabled || ($shell_exec_disabled)) {
@@ -423,6 +423,7 @@ if (zen_not_null($action)) {
                         //successful compression
                         if ($gzipped_filename = DIR_FS_BACKUP . $backup_file . '.gz') {
                             unlink(DIR_FS_BACKUP . $backup_file);
+                            $backup_file = $backup_file . '.gz';
                         }
                         break;
 
@@ -537,7 +538,7 @@ if (zen_not_null($action)) {
             }
             $fileinfo = pathinfo(realpath($restore_file));
 
-            // determine file format and unzip if needed. Note that *.sql.gz and *.sql.zip are first extracted to a temporary file.
+            // Determine file format and unzip if needed. Note that *.sql.gz and *.sql.zip are first extracted to a temporary file.
             if (in_array($fileinfo['extension'], ['sql', 'gz', 'zip'])) {
                 $tempfile_name = '';
 
@@ -689,7 +690,7 @@ if (zen_not_null($action)) {
                     }
 
                     if ($load_results === 0) {
-                        // store the last-restore-date, if successful. Update key if it exists rather than delete and insert or the insert increments the id
+                        // Store the last-restore-date, if successful. Update key if it exists rather than delete and insert or the insert increments the id
                         $db->Execute(
                             "INSERT INTO " . TABLE_CONFIGURATION . "
                         (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, date_added)
@@ -900,14 +901,14 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
                     }
 
                     $contents[] = [
-                        'text' => '<label>' . zen_draw_checkbox_field('skiplocks', 'yes', false) . ' ' . TEXT_INFO_SKIP_LOCKS . '</label'
+                        'text' => '<label>' . zen_draw_checkbox_field('skiplocks', 'yes', false) . ' ' . TEXT_INFO_SKIP_LOCKS . '</label>'
                     ];
 
                     // Download to file --- Should only be done if SSL is active, otherwise database is exposed as clear text
                     if ($dir_ok) {
-                        $contents[] = ['text' => zen_draw_checkbox_field('download', 'yes') . ' ' . TEXT_INFO_DOWNLOAD_ONLY];
+                        $contents[] = ['text' => '<label>' . zen_draw_checkbox_field('download', 'yes') . ' ' . TEXT_INFO_DOWNLOAD_ONLY . '</label>'];
                     } else {
-                        $contents[] = ['text' => zen_draw_radio_field('download', 'yes', true) . ' ' . TEXT_INFO_DOWNLOAD_ONLY];
+                        $contents[] = ['text' => '<label>' . zen_draw_radio_field('download', 'yes', true) . ' ' . TEXT_INFO_DOWNLOAD_ONLY . '</label>'];
                     }
                     if (!$ssl_on) {
                         $contents[] = ['text' => '<span class="errorText">* ' . TEXT_INFO_BEST_THROUGH_HTTPS . ' * </span>'];

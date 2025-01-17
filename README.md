@@ -78,6 +78,9 @@ In many cases, Windows servers will prevent the use of exec() commands by virtue
 To override this, you would need to alter the security permissions on cmd.exe and grant the Internet Guest Account read/execute as "Special Access" permissions.  
 NOTE: This may be a security risk to your server, so it's best to consult with your security expert before making such a change.
 
+## Why is this plugin not included with Zen Cart?
+https://github.com/zencart/zencart/issues/3050
+
 ## Changelog
 2024 08 torvista: incorporation of custom code from years of endless fettling.
 
