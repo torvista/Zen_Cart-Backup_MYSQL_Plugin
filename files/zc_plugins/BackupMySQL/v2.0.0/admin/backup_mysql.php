@@ -148,15 +148,15 @@ $exec_disabled = false;
 $shell_exec_disabled = false;
 $php_disabled_functions = ini_get("disable_functions");
 if (in_array('exec', explode(",", str_replace(' ', '', $php_disabled_functions)), true)) {
-    $messageStack->add(ERROR_EXEC_DISABLED);
+    $messageStack->add(ERROR_EXEC_DISABLED, 'caution');
     $exec_disabled = true;
 }
-if (!$os_win && in_array('shell_exec', explode(",", str_replace(' ', '', $php_disabled_functions)), true)) {
-    //$messageStack->add(ERROR_SHELL_EXEC_DISABLED, 'error');//shell_exec only used on Unix to find mysql: show error later
+if (!$os_win && in_array('shell_exec', explode(',', str_replace(' ', '', $php_disabled_functions)), true)) {
+    //$messageStack→add(ERROR_SHELL_EXEC_DISABLED, 'error');//shell_exec only used on Unix to find mysql: show error later
     $shell_exec_disabled = true;
 }
-if ($exec_disabled || ($shell_exec_disabled)) {
-    $messageStack->add(ERROR_PHP_DISABLED_FUNCTIONS . $php_disabled_functions, 'warning');
+if ($exec_disabled || $shell_exec_disabled) {
+    $messageStack->add(ERROR_PHP_DISABLED_FUNCTIONS . $php_disabled_functions, 'info');
 }
 
 //Compression
