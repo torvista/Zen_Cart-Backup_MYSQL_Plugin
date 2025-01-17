@@ -1,12 +1,13 @@
 <?php
 
 declare(strict_types=1);
+
 /**
- * part of Backup MySQL plugin
+ * part of the Backup MySQL plugin
  * @copyright Copyright 2024 Zen Cart Development Team
  * @license http://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
  * @author Dr.Byte
- * @version $Id: torvista 2024 Aug 14 $
+ * @version $Id: torvista 2025-01-17
  */
 
 $define = [
@@ -68,7 +69,7 @@ $define = [
     'TEXT_TEMP_SQL_DELETED' => 'Temporary file "%s" deleted',
     'TEXT_TEMP_SQL_NOT_DELETED' => 'Temporary file "%s" NOT deleted',
     'TEXT_WARNING_REMOTE_RESTORE' => 'You appear to be restoring to the PRODUCTION site (<strong>%s</strong>): are you SURE?',
-    'WARNING_NOT_SECURE_FOR_DOWNLOADS' => '<span class="errorText">NOTE: You do not have SSL enabled. Any downloads you do from this page will not be encrypted. Doing backups and restores will be fine, but download/upload of files from/to the server presents a security risk.',
+    'WARNING_NOT_SECURE_FOR_DOWNLOADS' => '<span class="errorText">NOTE: You do not have SSL enabled. Any downloads you do from this page will not be encrypted. Doing backups and restores will be fine, but the download/upload of files from/to the server presents a security risk.',
 ];
 
 return $define;

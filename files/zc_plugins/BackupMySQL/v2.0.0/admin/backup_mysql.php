@@ -1,12 +1,13 @@
 <?php
 
 declare(strict_types=1);
+
 /**
- * part of Backup MySQL plugin
+ * part of the Backup MySQL plugin
  * @copyright Copyright 2024 Zen Cart Development Team
  * @license http://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
  * @author Dr.Byte
- * @version $Id: torvista 2024 Aug 30 $
+ * @version $Id: torvista 2025-01-17
  */
 
 /** for phpStorm
@@ -24,6 +25,10 @@ if ($os_win) {
 
 require('includes/application_top.php');
 
+/**
+ * @param $path
+ * @return string[]
+ */
 function checkMysqlPath($path): array
 {
     $mysql_exe = 'unknown';
@@ -147,7 +152,7 @@ if (in_array('exec', explode(",", str_replace(' ', '', $php_disabled_functions))
     $exec_disabled = true;
 }
 if (!$os_win && in_array('shell_exec', explode(",", str_replace(' ', '', $php_disabled_functions)), true)) {
-    //$messageStack→add(ERROR_SHELL_EXEC_DISABLED, 'error');//shell_exec only used on Unix to find mysql: show error later
+    //$messageStack->add(ERROR_SHELL_EXEC_DISABLED, 'error');//shell_exec only used on Unix to find mysql: show error later
     $shell_exec_disabled = true;
 }
 if ($exec_disabled || ($shell_exec_disabled)) {
@@ -538,7 +543,7 @@ if (zen_not_null($action)) {
             }
             $fileinfo = pathinfo(realpath($restore_file));
 
-            // Determine file format and unzip if needed. Note that *.sql.gz and *.sql.zip are first extracted to a temporary file.
+            // Determine the file format and unzip if needed. Note that *.sql.gz and *.sql.zip are first extracted to a temporary file.
             if (in_array($fileinfo['extension'], ['sql', 'gz', 'zip'])) {
                 $tempfile_name = '';
 
@@ -564,8 +569,9 @@ if (zen_not_null($action)) {
 
                         //create a temporary file
                         $tempfile = tmpfile();
-                        //'w'	Open for writing only; place the file pointer at the beginning of the file and truncate the file to zero length. If the file does not exist, attempt to create it.
-                        //fwrite($tempfile, 'wb');
+                        // 'w':	open for writing only; place the file pointer at the beginning of the file and truncate the file to zero length.
+                        // If the file does not exist, attempt to create it.
+                        // fwrite($tempfile, 'wb');
 
                         // parse the source file
                         while (!gzeof($file_gz)) {

@@ -1,18 +1,19 @@
 <?php
 
 declare(strict_types=1);
+
 /**
- * part of Backup MySQL plugin
+ * part of the Backup MySQL plugin
  * @copyright Copyright 2024 Zen Cart Development Team
  * @license http://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
  * @author Dr.Byte
- * @version $Id: torvista 2024 Aug 14 $
+ * @version $Id: torvista 2025-01-17
  */
 
 define('FILENAME_BACKUP_MYSQL', 'backup_mysql');
 
 // optional: define your production server name to prevent accidental restores!
-// Use the name that is shown in the Admin header in front of the timezone
+// Use the name shown in the Admin header in front of the timezone
 //define('BACKUP_MYSQL_SERVER_NAME', 'YOUR_SERVER_NAME');
 
 // define the locations of the mysql utilities if not found automatically
