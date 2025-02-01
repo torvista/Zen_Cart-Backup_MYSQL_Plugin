@@ -7,15 +7,16 @@ declare(strict_types=1);
  * @copyright Copyright 2024 Zen Cart Development Team
  * @license http://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
  * @author Dr.Byte
- * @version $Id: torvista 2025-01-17
+ * @author torvista
+ * @version $Id: torvista 01 Feb 2025
  */
 
-/** for phpStorm
+/** phpStorm
  * @var queryFactoryResult $db
  * @var messageStack $messageStack
  */
 
-// determine operating system to use specific quotes with password
+// determine the operating system, to use the correct quotes around the  password
 $os_win = str_starts_with(strtoupper(PHP_OS), 'WIN');
 if ($os_win) {
     define('OS_DELIM', '"');
@@ -24,6 +25,8 @@ if ($os_win) {
 }
 
 require('includes/application_top.php');
+
+//echo ini_get('memory_limit');
 
 /**
  * @param $path
@@ -58,7 +61,7 @@ function checkMysqlPath($path): array
  * @param  int  $level  Compression level (default: 9)
  *
  * @return string Output filename
- * @throws Exception if the input or output file can not be opened
+ * @throws Exception if the input or output file cannot be opened
  *
  */
 function gzcompressfile(string $inFilename, int $level = 9): string
@@ -329,7 +332,7 @@ if (zen_not_null($action)) {
             //$dump_params .= ' --password="' . DB_SERVER_PASSWORD . '"';//WIN DEFINITELY needs double quotes around the filename when shell metacharacters *%&$& etc. are in the password
             $dump_params .= ' --password=' . OS_DELIM . DB_SERVER_PASSWORD . OS_DELIM;//NIX DEFINITELY needs single quotes around the filename when shell metacharacters *%&$& etc. are in the password
             $dump_params .= ' --opt';   //"optimized" -- turns on all "fast" and optimized export methods
-            $dump_params .= ' --complete-insert';  // undo optimization slightly and do "complete inserts"--lists all column names for benefit of restore of diff systems
+            $dump_params .= ' --complete-insert';  // undo optimization slightly and do "complete inserts"--lists all column names for the benefit of restore in different systems
             if ($skip_locks_requested) {
                 $dump_params .= ' --skip-lock-tables --skip-add-locks';     //use this if your host prevents you from locking tables for backup
             }
@@ -338,19 +341,22 @@ if (zen_not_null($action)) {
 //        $dump_params .= ' --force';  // ignore SQL errors if they occur
 //        $dump_params .= ' --compatible=postgresql'; // other options are: ,mysql323, mysql40
             $dump_params .= ' --result-file=' . OS_DELIM . DIR_FS_BACKUP . $backup_file . OS_DELIM;//WIN DEFINITELY needs double quote around the filename
+
+
             //$dump_params .= ' --databases ' . DB_DATABASE;//this option will restore only to the same-named database
             $dump_params .= ' ' . DB_DATABASE;
+
+            //  $dump_params .= ' | tail+2';// ensures console output is sent to the $output array
+
 
             // if using the "--tables" parameter, this should be the last parameter, and tables should be space-delimited
             // fill $tables_to_export with list of tables, separated by spaces, if wanna just export certain tables
             $dump_params .= (($tables_to_export === '') ? '' : ' --tables ' . $tables_to_export);
+
             $dump_params .= ' 2>&1';// ensures console output is sent to the $output array
 
             // allow overriding the path to tool via url
             $toolfilename = !empty($_GET['tool']) ? $_GET['tool'] : $mysqldump_exe;
-
-            // remove " marks in parameters for friendlier IIS support
-//REQUIRES TESTING:        if (strstr($toolfilename,'.exe')) $dump_params = str_replace('"','',$dump_params);
 
             if ($debug) {
                 $messageStack->add_session('Backup COMMAND: ' . $toolfilename . ' ' . $dump_params, 'info');
@@ -359,7 +365,7 @@ if (zen_not_null($action)) {
             //- In PHP/5.2 and older you have to surround the full command plus arguments in double quotes
             //- In PHP/5.3 and greater you don't have to (if you do, your script will break)
 
-            // this is the actual mysqldump. steve removed @: why hide errors?
+            // this is the actual mysqldump command
             $resultcodes = exec($toolfilename . $dump_params, $output, $dump_results);
             // $dump_results is a number returned by operating system: anything other than 0 is a fail
             // Windows System Error Codes https://msdn.microsoft.com/en-us/library/windows/desktop/ms681381(v=vs.85).aspx
@@ -401,7 +407,7 @@ if (zen_not_null($action)) {
             }
 
             if (($dump_results === 0 || $dump_results === '') && file_exists(DIR_FS_BACKUP . $backup_file)) {
-                // display success message noting that MYSQLDUMP was used
+                // display a success message noting that MYSQLDUMP was used
                 $messageStack->add_session(
                     '<a href="' . ((ENABLE_SSL_ADMIN === 'true') ? DIR_WS_HTTPS_ADMIN : DIR_WS_ADMIN) . 'backups/' . $backup_file . '">' . SUCCESS_DATABASE_SAVED . '</a>',
                     'success'
@@ -424,7 +430,11 @@ if (zen_not_null($action)) {
             if (file_exists(DIR_FS_BACKUP . $backup_file)) {
                 switch ($_POST['compress']) {
                     case 'gzip':
-                        $gzipped_filename = gzcompressfile(DIR_FS_BACKUP . $backup_file);
+                        try {
+                            $gzipped_filename = gzcompressfile(DIR_FS_BACKUP . $backup_file);
+                        } catch (Exception $e) {
+                            die ('line ' . __LINE__ . ': gzcompressfile failed with "' . DIR_FS_BACKUP . $backup_file . '"');
+                        }
                         //successful compression
                         if ($gzipped_filename = DIR_FS_BACKUP . $backup_file . '.gz') {
                             unlink(DIR_FS_BACKUP . $backup_file);
@@ -607,41 +617,58 @@ if (zen_not_null($action)) {
 
                 //handle MariaDB compatibility problem
                 //https://mariadb.org/mariadb-dump-file-compatibility-change/
-                $db_server_info = $db->get_server_info(); //e.g. "11.3.1-MariaDB-log"
-                if ($pos = strpos($db_server_info, 'MariaDB')) {
-                    //MariaDB info may have various suffixes
-                    $db_server_info = substr($db_server_info, 0, $pos + 7);
-                    $db_maria_version = substr($db_server_info, 0, $pos - 1);
+                //example problem lines: /*!999999\- enable the sandbox mode */  and  /*M!999999\- enable the sandbox mode */
+                $problem_strings = ['/*!999999\- enable the sandbox mode */', '/*M!999999\- enable the sandbox mode */'];
+                $spl_debug = false;
+
+                if ($spl_debug) echo $restore_from . '<br>';
+                try {
+                    $file = new SplFileObject($restore_from);
+                } catch (Exception $e) {
+                    die ('line ' . __LINE__ . ': SplFileObject construct failed with "' . $restore_from . '"');
                 }
-                //affects MariaDB <11.4 and all Mysql clients
-                if (!str_contains($db_server_info, 'MariaDB') || version_compare($db_server_info, '11.4-MariaDB') === -1) {
-                    $contents = file_get_contents($restore_from);
-                    //preg_replace returns null if it fails:https://www.myintervals.com/blog/2008/01/25/wtf-preg_replace-returns-null/ due to the string being too long
-                    //$contents = preg_replace('/\/*.+enable the sandbox mode.+/gu', '', $contents, -1, $countBad);
 
-                    //example problem lines: /*!999999\- enable the sandbox mode */  and  /*M!999999\- enable the sandbox mode */
-                    $problem_strings = ['/*!999999\- enable the sandbox mode */', '/*M!999999\- enable the sandbox mode */'];
+                $file->seek(0);
+                if ($spl_debug) echo 'first line:<br>' . $file->current() . '<br>';
+                if (in_array(trim($file->current()), $problem_strings)) {
+                    if ($spl_debug) echo 'problem string found!' . '<br>';
+                    $linesToDelete = [1];
 
-                    foreach ($problem_strings as $problem_string) {
-                        $contents = str_replace($problem_string, '', $contents, $countBad);
-                        if ($countBad > 0) {
-                            //create a temporary file
-                            $tempfile = tmpfile();
-                            fwrite($tempfile, $contents);
+                    // lock the source file (which is a temp file post-extraction)
+                    $file->flock(LOCK_EX);
+                    
+                    // create a new temp File
+                    $tempFileName = tempnam(sys_get_temp_dir(), (string)rand());
+                    $temp = new SplFileObject($tempFileName, 'w+');
+                    if ($spl_debug) echo 'new temp file created: "' . $tempFileName . '"<br>';
 
-                            // get temp file details
-                            $tempfile_meta_data = stream_get_meta_data($tempfile);
-                            $tempfile_name = $tempfile_meta_data["uri"];
-                            $restore_from = $tempfile_name;
-
-                            $messageStack->add_session(
-                                '<a href="https://mariadb.org/mariadb-dump-file-compatibility-change" target="_blank">MariaDB dump compatibility bug</a> detected/corrected: ' .
-                                ($pos ? 'you should update your MariaDB (currently ' . $db_maria_version . ') to version 11.4 or above.' : 'this affects all MySQL clients (but not MariaDB 11.4 and above.')
-                            );
-                            break;
+                    // lock the new temp file
+                    $temp->flock(LOCK_EX);
+                    // write to the temp file without the lines
+                    foreach ($file as $key => $line) {
+                        if (in_array($key + 1, $linesToDelete) === false) {
+                            $temp->fwrite($line);
+                        } else {
+                            if ($spl_debug) echo '$key=' . $key . ':deleted line ' . $key + 1 . '<br>';
                         }
                     }
+                    // release the files to rename
+                    if ($spl_debug) echo 'release files<br>';
+                    $file->flock(LOCK_UN);
+                    $temp->flock(LOCK_UN);
+                    if ($spl_debug) echo 'unset SPL object<br>';
+                    unset($file, $temp); // Kill the SPL objects releasing further locks
+
+                    if ($spl_debug) echo 'unlink source restore file: "' . $restore_from . '"<br>';
+                    unlink($restore_from);
+
+                    if ($spl_debug) echo 'rename new temp file as source restore file<br>';
+                    rename($tempFileName, $restore_from);
+                    if ($spl_debug) echo 'renamed file:' . '<br>' . $tempFileName . '<br>to<br>' . $restore_from . '<br>';
+                } else {
+                    if ($spl_debug) echo 'problem string not found';
                 }
+                if ($spl_debug) die;
                 //eof Maria bug
 
                 //Restore using "mysql"
@@ -652,7 +679,6 @@ if (zen_not_null($action)) {
                 $load_params .= ' ' . DB_DATABASE; // this needs to be the 2nd-last parameter
                 $load_params .= ' < ' . OS_DELIM . $restore_from . OS_DELIM; // this needs to be the LAST parameter
                 $load_params .= ' 2>&1';
-                //DEBUG echo $mysql_exe . ' ' . $load_params;
 
                 if ($restore_from !== '' && file_exists($restore_from)) {
                     $toolfilename = !empty($_GET['tool']) ? $_GET['tool'] : $mysql_exe;
@@ -672,6 +698,7 @@ if (zen_not_null($action)) {
                     $resultcodes = exec($toolfilename . $load_params, $output, $load_results);
                     // $output gets filled with an array of all the normally displayed dialogue that comes back from the command
                     // $load_results is an integer of the execution result
+                    
                     exec('exit(0)');
 
                     // parse the value that comes back from the script
@@ -705,7 +732,7 @@ if (zen_not_null($action)) {
                         ON DUPLICATE KEY UPDATE configuration_value ='" . $restore_from . "'"
                         );
 
-                        // was a temp file used from a compressed (.zip, .gz) file
+                        // Was a temp file used from a compressed (.zip, .gz) file?
                         if (file_exists($tempfile_name)) {
                             $restore_file_info = $restore_file . " ($tempfile_name)";
                             if (isset($tempfile) && is_resource($tempfile)) {
@@ -735,7 +762,7 @@ if (zen_not_null($action)) {
 
             } else {
                 $messageStack->add_session(sprintf(FAILURE_DATABASE_NOT_RESTORED_FILE_EXTENSION_INVALID, $restore_file), 'error');
-            }// end if not allowed extension type
+            }// end if the extension type is not allowed
             zen_redirect(zen_href_link(FILENAME_BACKUP_MYSQL, ($debug ? 'debug=ON' : '')));
             break;
     }
@@ -788,7 +815,7 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
                 //  if (!get_cfg_var('safe_mode') && $dir_ok === true) {
                 $dir = dir(DIR_FS_BACKUP);
                 $contents = [];
-                // build array of files in backup directory
+                // build an array of the files in the backup directory
                 while ($file_gz = $dir->read()) {
                     if (!is_dir(DIR_FS_BACKUP . $file_gz)) {
                         if (!str_starts_with($file_gz, '.') && !in_array($file_gz, ['empty.txt', 'index.php', 'index.htm', 'index.html'])) {
@@ -867,13 +894,9 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
                 } ?>
             </div>
             <div class="small">
-                <?= TEXT_BACKUP_DIRECTORY . ' ' . DIR_FS_BACKUP ?>
-                <br>
-                <?php
-                if (defined('BACKUP_MYSQL_LAST_RESTORE')) {
-                    echo TEXT_LAST_RESTORATION . ' ' . BACKUP_MYSQL_LAST_RESTORE . ' <a href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'action=forget') . '">' . TEXT_FORGET . '</a>';
-                }
-                ?>
+                <p><?= TEXT_BACKUP_DIRECTORY . ' ' . DIR_FS_BACKUP ?><br>
+                    <?= defined('BACKUP_MYSQL_LAST_RESTORE') ? TEXT_LAST_RESTORATION . ' ' . BACKUP_MYSQL_LAST_RESTORE . ' <a href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'action=forget') . '">' . TEXT_FORGET . '</a>' : '' ?></p>
+                <p>memory limit:<?= ini_get('memory_limit') ?></p>
             </div>
         </div>
 
@@ -910,7 +933,7 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
                         'text' => '<label>' . zen_draw_checkbox_field('skiplocks', 'yes', false) . ' ' . TEXT_INFO_SKIP_LOCKS . '</label>'
                     ];
 
-                    // Download to file --- Should only be done if SSL is active, otherwise database is exposed as clear text
+                    // Download to file --- Should only be done if SSL is active, otherwise the database is exposed as clear text
                     if ($dir_ok) {
                         $contents[] = ['text' => '<label>' . zen_draw_checkbox_field('download', 'yes') . ' ' . TEXT_INFO_DOWNLOAD_ONLY . '</label>'];
                     } else {
@@ -919,7 +942,7 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
                     if (!$ssl_on) {
                         $contents[] = ['text' => '<span class="errorText">* ' . TEXT_INFO_BEST_THROUGH_HTTPS . ' * </span>'];
                     }
-                    // add suffix to backup filename
+                    // add suffix to the backup filename
                     $contents[] = [
                         'text' => '<label>' . TEXT_ADD_SUFFIX . '</label><br>' . zen_draw_input_field('suffix', '', 'size="31" maxlength="30"')
                     ];
@@ -1044,7 +1067,7 @@ if (defined('BACKUP_MYSQL_SERVER_NAME') && gethostname() === BACKUP_MYSQL_SERVER
             return confirm('<?= sprintf(TEXT_WARNING_REMOTE_RESTORE, BACKUP_MYSQL_SERVER_NAME); ?>');
         });
     </script>
-<?php
+    <?php
 } ?>
 </body>
 </html>
