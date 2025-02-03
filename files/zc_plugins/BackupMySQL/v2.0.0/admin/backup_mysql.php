@@ -276,10 +276,8 @@ if (defined('BACKUP_MYSQL_LOCATION') && ($mysql_exe !== 'unknown' && $mysqldump_
             $path_found = $path;
             break; //exit when executables are found
 
-        } else {
-            if ($debug) {
-                $messageStack->add(TEXT_EXECUTABLES_NOT_FOUND, 'info');
-            }
+        } elseif ($debug) {
+            $messageStack->add(TEXT_EXECUTABLES_NOT_FOUND, 'info');
         }
     }
     if (empty($path_found)) {
@@ -342,17 +340,12 @@ if (zen_not_null($action)) {
 //        $dump_params .= ' --compatible=postgresql'; // other options are: ,mysql323, mysql40
             $dump_params .= ' --result-file=' . OS_DELIM . DIR_FS_BACKUP . $backup_file . OS_DELIM;//WIN DEFINITELY needs double quote around the filename
 
-
-            //$dump_params .= ' --databases ' . DB_DATABASE;//this option will restore only to the same-named database
+//        $dump_params .= ' --databases ' . DB_DATABASE;//this option will restore only to the same-named database
             $dump_params .= ' ' . DB_DATABASE;
-
-            //  $dump_params .= ' | tail+2';// ensures console output is sent to the $output array
-
-
+            
             // if using the "--tables" parameter, this should be the last parameter, and tables should be space-delimited
             // fill $tables_to_export with list of tables, separated by spaces, if wanna just export certain tables
             $dump_params .= (($tables_to_export === '') ? '' : ' --tables ' . $tables_to_export);
-
             $dump_params .= ' 2>&1';// ensures console output is sent to the $output array
 
             // allow overriding the path to tool via url
@@ -619,9 +612,10 @@ if (zen_not_null($action)) {
                 //https://mariadb.org/mariadb-dump-file-compatibility-change/
                 //example problem lines: /*!999999\- enable the sandbox mode */  and  /*M!999999\- enable the sandbox mode */
                 $problem_strings = ['/*!999999\- enable the sandbox mode */', '/*M!999999\- enable the sandbox mode */'];
-                $spl_debug = false;
 
-                if ($spl_debug) echo $restore_from . '<br>';
+                if ($debug) {
+                    $messageStack->add_session('$restore_from file "' . $restore_from . '"', 'info');
+                }
                 try {
                     $file = new SplFileObject($restore_from);
                 } catch (Exception $e) {
@@ -629,9 +623,13 @@ if (zen_not_null($action)) {
                 }
 
                 $file->seek(0);
-                if ($spl_debug) echo 'first line:<br>' . $file->current() . '<br>';
+                if ($debug) {
+                    $messageStack->add_session('first line of file is:<br>' . $file->current(), 'info');
+                }
                 if (in_array(trim($file->current()), $problem_strings)) {
-                    if ($spl_debug) echo 'problem string found!' . '<br>';
+                    if ($debug) {
+                        $messageStack->add_session('problem string found!', 'caution');
+                    }
                     $linesToDelete = [1];
 
                     // lock the source file (which is a temp file post-extraction)
@@ -640,7 +638,9 @@ if (zen_not_null($action)) {
                     // create a new temp File
                     $tempFileName = tempnam(sys_get_temp_dir(), (string)rand());
                     $temp = new SplFileObject($tempFileName, 'w+');
-                    if ($spl_debug) echo 'new temp file created: "' . $tempFileName . '"<br>';
+                    if ($debug) {
+                        $messageStack->add_session('new temp file created: "' . $tempFileName . '"', 'info');
+                    }
 
                     // lock the new temp file
                     $temp->flock(LOCK_EX);
@@ -648,27 +648,34 @@ if (zen_not_null($action)) {
                     foreach ($file as $key => $line) {
                         if (in_array($key + 1, $linesToDelete) === false) {
                             $temp->fwrite($line);
-                        } else {
-                            if ($spl_debug) echo '$key=' . $key . ':deleted line ' . $key + 1 . '<br>';
+                        } elseif ($debug) {
+                                $messageStack->add_session('$key=' . $key . ':deleted line ' . $key + 1, 'info');
                         }
                     }
                     // release the files to rename
-                    if ($spl_debug) echo 'release files<br>';
+                    if ($debug) {
+                        $messageStack->add_session('release files', 'info');
+                    }
                     $file->flock(LOCK_UN);
                     $temp->flock(LOCK_UN);
-                    if ($spl_debug) echo 'unset SPL object<br>';
+                    if ($debug) {
+                        $messageStack->add_session('unset SPL object', 'info');
+                    }
                     unset($file, $temp); // Kill the SPL objects releasing further locks
 
-                    if ($spl_debug) echo 'unlink source restore file: "' . $restore_from . '"<br>';
-                    unlink($restore_from);
-
-                    if ($spl_debug) echo 'rename new temp file as source restore file<br>';
-                    rename($tempFileName, $restore_from);
-                    if ($spl_debug) echo 'renamed file:' . '<br>' . $tempFileName . '<br>to<br>' . $restore_from . '<br>';
-                } else {
-                    if ($spl_debug) echo 'problem string not found';
+                    $restore_from_old = $restore_from;
+                    $restore_from = $tempFileName;
+                    if ($debug) {
+                        $messageStack->add_session('new $restore file "' . $restore_from . '"', 'info');
+                    }
+                    $check = unlink($restore_from_old);
+                    if ($debug || $check === false) {
+                        $messageStack->add_session('unlink $restore_from_old "' . $restore_from_old . '" : ' . ($check ? ' ok' : ' FAILED'), ($check ? 'info' : 'error'));
+                    }
+                    
+                } elseif ($debug) {
+                     //   $messageStack->add_session('problem string not found', 'info');
                 }
-                if ($spl_debug) die;
                 //eof Maria bug
 
                 //Restore using "mysql"
@@ -812,9 +819,9 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
                 </thead>
                 <tbody>
                 <?php
-                //  if (!get_cfg_var('safe_mode') && $dir_ok === true) {
                 $dir = dir(DIR_FS_BACKUP);
                 $contents = [];
+                
                 // build an array of the files in the backup directory
                 while ($file_gz = $dir->read()) {
                     if (!is_dir(DIR_FS_BACKUP . $file_gz)) {
@@ -824,7 +831,7 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
                     }
                 }
                 sort($contents);
-                for ($i = 0, $n = sizeof($contents); $i < $n; $i++) {
+                for ($i = 0, $n = count($contents); $i < $n; $i++) {
                     $entry = $contents[$i];
                     $check = 0;
 
@@ -879,7 +886,6 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
                     <?php
                 }
                 $dir->close();
-                //  } // endif safe-mode & dir_ok
                 ?>
                 </tbody>
             </table>
