@@ -842,7 +842,7 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
                         && ($action !== 'restorelocal')) {
                         $file_array['file'] = $entry;
                         $file_array['date'] = date(PHP_DATE_TIME_FORMAT, filemtime(DIR_FS_BACKUP . $entry));
-                        $file_array['size'] = number_format(filesize(DIR_FS_BACKUP . $entry) / 1024) . ' kb';
+                        $file_array['size'] = filesize(DIR_FS_BACKUP . $entry);
 
                         switch (substr($entry, -3)) {
                             case 'zip':
@@ -874,7 +874,7 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
                         <?= '<a href="' . ((ENABLE_SSL_ADMIN === 'true') ? DIR_WS_HTTPS_ADMIN : DIR_WS_ADMIN) . 'backups/' . $entry . '">' . zen_image(DIR_WS_ICONS . 'file_download.gif', ICON_FILE_DOWNLOAD) . '</a>&nbsp;' . $entry ?></td>
                     <td class="dataTableContent center" onClick="document.location.href='<?= zen_href_link(FILENAME_BACKUP_MYSQL, $onclick_link) ?>'">
                         <?= date(PHP_DATE_TIME_FORMAT, filemtime(DIR_FS_BACKUP . $entry)) ?></td>
-                    <td class="dataTableContent right" onClick="document.location.href='<?= zen_href_link(FILENAME_BACKUP_MYSQL, $onclick_link) ?>'"><?= number_format(filesize(DIR_FS_BACKUP . $entry) / 1024) ?> Kb</td>
+                    <td class="dataTableContent right" onClick="document.location.href='<?= zen_href_link(FILENAME_BACKUP_MYSQL, $onclick_link) ?>'"><?= number_format(filesize(DIR_FS_BACKUP . $entry) / 1048576, 2) ?> MB</td>
                     <td class="dataTableContent right"><?php
                         if (isset($buInfo) && is_object($buInfo) && ($entry === $buInfo->file)) {
                             echo zen_image(DIR_WS_IMAGES . 'icon_arrow_right.gif', '');
@@ -983,7 +983,7 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
                     $heading[] = ['text' => '<strong>' . $buInfo->file . '</strong>'];
 
                     $contents[] = ['text' => TEXT_INFO_DATE . ' ' . $buInfo->date];
-                    $contents[] = ['text' => TEXT_INFO_SIZE . ' ' . $buInfo->size];
+                    $contents[] = ['text' => TEXT_INFO_SIZE . ' ' . number_format(($buInfo->size)/1048576, 2) . ' MB'] ;
                     $contents[] = ['text' => TEXT_INFO_COMPRESSION . ' ' . $buInfo->compression];
 
                     $contents[] = [
