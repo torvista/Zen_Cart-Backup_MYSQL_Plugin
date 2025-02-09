@@ -227,7 +227,10 @@ if (defined('BACKUP_MYSQL_LOCATION') && ($mysql_exe !== 'unknown' && $mysqldump_
         $messageStack->add(ERROR_SHELL_EXEC_DISABLED, 'warning');
 //Unix "which" command finds the executable.
     } else {
-        $paths_auto = str_replace('mysql', '', trim(shell_exec('which mysql')));
+        $which_mysql = @shell_exec('which mysql');
+        if ($which_mysql !== null && $which_mysql !== false) {
+            $paths_auto = str_replace('mysql', '', trim($which_mysql));
+                }
     }
     if ($debug) {
         $messageStack->add('Auto-Detected path to check:"' . $paths_auto . '"', 'info');
