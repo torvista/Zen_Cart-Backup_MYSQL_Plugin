@@ -1,9 +1,12 @@
-# Zen Cart - Backup MYSQL Plugin v2.0
+# Zen Cart - Backup MYSQL Encapsulated Plugin v2.0
 
 *February 2025: This fileset is now very different to the last version in the Zen Cart Plugins, but will not be uploaded there until there is some feedback from users.*
 
+## Functionality
 Backup/Restore your database from the Zen Cart Admin.  
 Use for backup security or for fast and easy restores to your development server.
+
+Compatible with Zen Cart 2.1+ and php 8+.
 
 This add-on works much faster than a php-scripted backup tool and supports backups of "huge" databases. Supports zip and gzip in unix and Windows servers.
 
@@ -82,6 +85,8 @@ NOTE: This may be a security risk to your server, so it's best to consult with y
 https://github.com/zencart/zencart/issues/3050
 
 ## Changelog
+See commit history for subsequent modifcations.
+
 2025 02 torvista: handle Maria compatibility problem
 
 2024 08 torvista: incorporation of custom code from years of endless fettling.
