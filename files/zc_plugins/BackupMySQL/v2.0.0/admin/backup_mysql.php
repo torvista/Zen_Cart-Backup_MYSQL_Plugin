@@ -68,7 +68,7 @@ function gzcompressfile(string $inFilename, int $level = 9): string
 {
     // Is the file gzipped already?
     $extension = pathinfo($inFilename, PATHINFO_EXTENSION);
-    if ($extension == 'gz') {
+    if ($extension === 'gz') {
         return $inFilename;
     }
 
@@ -112,7 +112,7 @@ $debug = isset($_GET['debug']) && (strtoupper($_GET['debug']) === 'ON' || (int)$
 $tables_to_export = !empty($_GET['tables']) ? str_replace(',', ' ', $_GET['tables']) : '';
 $redirect = !empty($_GET['returnto']) ? $_GET['returnto'] : '';
 $_POST['compress'] = !empty($_REQUEST['compress']) ? $_REQUEST['compress'] : false;
-$skip_locks_requested = isset($_REQUEST['skiplocks']) && $_REQUEST['skiplocks'] == 'yes';
+$skip_locks_requested = isset($_REQUEST['skiplocks']) && $_REQUEST['skiplocks'] === 'yes';
 
 // check for use of SSL
 $ssl_on = str_starts_with(HTTP_SERVER, 'https');
@@ -134,7 +134,7 @@ if ($debug && $dir_ok) {
 // check to see if open_basedir restrictions in effect -- if so, likely won't be able to use this tool.
 $flag_basedir = false;
 $open_basedir = ini_get('open_basedir');
-if ($open_basedir !== '') {
+if (!empty($open_basedir)) {
     $basedir_check_array = explode(':', $open_basedir);
     foreach ($basedir_check_array as $basedir_check) {
         if (!strstr(DIR_FS_ADMIN, $basedir_check)) {
@@ -758,7 +758,7 @@ if (zen_not_null($action)) {
                         // a redirect back after completion does not work
                         //zen_redirect(zen_href_link(FILENAME_BACKUP_MYSQL, ($debug ? 'debug=ON' : '')));
 
-                    } elseif ($load_results == '127') {
+                    } elseif ($load_results === 127) {
                         $messageStack->add_session(FAILURE_DATABASE_NOT_RESTORED_UTIL_NOT_FOUND, 'error');
                     } else {
                         $messageStack->add_session(FAILURE_DATABASE_NOT_RESTORED, 'error');
@@ -836,10 +836,10 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
                     $check = 0;
 
                     if (
-                        (!isset($_GET['file']) || $_GET['file'] == $entry)
+                        (!isset($_GET['file']) || $_GET['file'] === $entry)
                         && !isset($buInfo)
-                        && ($action != 'backup')
-                        && ($action != 'restorelocal')) {
+                        && ($action !== 'backup')
+                        && ($action !== 'restorelocal')) {
                         $file_array['file'] = $entry;
                         $file_array['date'] = date(PHP_DATE_TIME_FORMAT, filemtime(DIR_FS_BACKUP . $entry));
                         $file_array['size'] = number_format(filesize(DIR_FS_BACKUP . $entry) / 1024) . ' kb';
@@ -871,12 +871,12 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
                     }
                     ?>
                     <td class="dataTableContent" onClick="document.location.href='<?= zen_href_link(FILENAME_BACKUP_MYSQL, $onclick_link) ?>'">
-                        <?= '<a href="' . ((ENABLE_SSL_ADMIN == 'true') ? DIR_WS_HTTPS_ADMIN : DIR_WS_ADMIN) . 'backups/' . $entry . '">' . zen_image(DIR_WS_ICONS . 'file_download.gif', ICON_FILE_DOWNLOAD) . '</a>&nbsp;' . $entry ?></td>
+                        <?= '<a href="' . ((ENABLE_SSL_ADMIN === 'true') ? DIR_WS_HTTPS_ADMIN : DIR_WS_ADMIN) . 'backups/' . $entry . '">' . zen_image(DIR_WS_ICONS . 'file_download.gif', ICON_FILE_DOWNLOAD) . '</a>&nbsp;' . $entry ?></td>
                     <td class="dataTableContent center" onClick="document.location.href='<?= zen_href_link(FILENAME_BACKUP_MYSQL, $onclick_link) ?>'">
                         <?= date(PHP_DATE_TIME_FORMAT, filemtime(DIR_FS_BACKUP . $entry)) ?></td>
                     <td class="dataTableContent right" onClick="document.location.href='<?= zen_href_link(FILENAME_BACKUP_MYSQL, $onclick_link) ?>'"><?= number_format(filesize(DIR_FS_BACKUP . $entry) / 1024) ?> Kb</td>
                     <td class="dataTableContent right"><?php
-                        if (isset($buInfo) && is_object($buInfo) && ($entry == $buInfo->file)) {
+                        if (isset($buInfo) && is_object($buInfo) && ($entry === $buInfo->file)) {
                             echo zen_image(DIR_WS_IMAGES . 'icon_arrow_right.gif', '');
                         } else {
                             echo '<a href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'file=' . $entry) . '">' . zen_image(DIR_WS_IMAGES . 'icon_info.gif', IMAGE_ICON_INFO) . '</a>';
@@ -893,9 +893,9 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
             <div class="right">
                 <?php
                 if (($action !== 'backup') && !ini_get('safe_mode') && $dir_ok) {
-                    echo '<a class="btn btn-primary" role="button" href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'action=backup' . ($debug ? '&debug=ON' : '')) . (($tables_to_export != '') ? '&tables=' . str_replace(' ', ',', $tables_to_export) : '') . '">' . IMAGE_BACKUP . '</a>&nbsp;&nbsp;';
+                    echo '<a class="btn btn-primary" role="button" href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'action=backup' . ($debug ? '&debug=ON' : '')) . (($tables_to_export !== '') ? '&tables=' . str_replace(' ', ',', $tables_to_export) : '') . '">' . IMAGE_BACKUP . '</a>&nbsp;&nbsp;';
                 }
-                if (($action != 'restorelocal') && isset($dir)) {
+                if (($action !== 'restorelocal') && isset($dir)) {
                     echo '<a class="btn btn-primary" role="button" href="' . zen_href_link(FILENAME_BACKUP_MYSQL, 'action=restorelocal' . ($debug ? '&debug=ON' : '')) . '">' . IMAGE_RESTORE . '</a>';
                 } ?>
             </div>
@@ -915,7 +915,7 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
                 case 'backup':
                     $heading[] = ['text' => '<strong>' . TEXT_INFO_HEADING_NEW_BACKUP . '</strong>'];
 
-                    $contents = ['form' => zen_draw_form('backup', FILENAME_BACKUP_MYSQL, 'action=backupnow' . ($debug ? '&debug=ON' : '') . (($tables_to_export != '') ? '&tables=' . str_replace(' ', ',', $tables_to_export) : ''), 'post', 'id="backup"')];
+                    $contents = ['form' => zen_draw_form('backup', FILENAME_BACKUP_MYSQL, 'action=backupnow' . ($debug ? '&debug=ON' : '') . (($tables_to_export !== '') ? '&tables=' . str_replace(' ', ',', $tables_to_export) : ''), 'post', 'id="backup"')];
 
                     $contents[] = ['text' => TEXT_INFO_NEW_BACKUP];
 
@@ -988,7 +988,7 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
 
                     $contents[] = [
                         'text' => zen_break_string(
-                            sprintf(TEXT_INFO_RESTORE, DIR_FS_BACKUP . (($buInfo->compression != TEXT_NO_EXTENSION) ? substr($buInfo->file, 0, strrpos($buInfo->file, '.')) : $buInfo->file), ($buInfo->compression != TEXT_NO_EXTENSION) ? TEXT_INFO_UNPACK : ''),
+                            sprintf(TEXT_INFO_RESTORE, DIR_FS_BACKUP . (($buInfo->compression !== TEXT_NO_EXTENSION) ? substr($buInfo->file, 0, strrpos($buInfo->file, '.')) : $buInfo->file), ($buInfo->compression !== TEXT_NO_EXTENSION) ? TEXT_INFO_UNPACK : ''),
                             35,
                             ' '
                         )
