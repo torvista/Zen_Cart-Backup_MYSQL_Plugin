@@ -8,18 +8,20 @@ declare(strict_types=1);
  * @license http://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
  * @author Dr.Byte
  * @author torvista
- * @version $Id: torvista 2025-01-17
+ * @version $Id: backup_mysql.php torvista 12 Feb 2025
  */
 
-define('FILENAME_BACKUP_MYSQL', 'backup_mysql');
-
-// optional: define your production server name to prevent accidental restores!
+// Define your production server name to show a warning if restoring to the production server!
 // Use the name shown in the Admin header in front of the timezone
-//define('BACKUP_MYSQL_SERVER_NAME', 'YOUR_SERVER_NAME');
+define('BACKUP_MYSQL_SERVER_NAME', '');
 
 // define the locations of the mysql utilities if not found automatically
-// Use FORWARD slashes /.
-// Typical location is in '/usr/bin/' ... but not on Windows servers.
-// try 'c:/mysql/bin/mysql.exe' and 'c:/mysql/bin/mysqldump.exe' on Windows hosts ... change drive letter and path as needed
-//define('LOCAL_EXE_MYSQL', '/usr/bin/mysql');  // used for restores
-//define('LOCAL_EXE_MYSQLDUMP', '/usr/bin/mysqldump');  // used for backups
+// Use FORWARD slashes /
+// A typical location is in '/usr/bin/' ... but not on Windows servers.
+// try 'c:/mysql/bin/' on Windows hosts ... change drive letter and path as needed
+// include the trailing slash
+define('BACKUP_MYSQL_LOCAL_EXE_PATH', '');      // local/development server
+define('BACKUP_MYSQL_PRODUCTION_EXE_PATH', ''); // production server
+
+//Do not edit
+define('FILENAME_BACKUP_MYSQL', 'backup_mysql');

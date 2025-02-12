@@ -1,6 +1,6 @@
-# Zen Cart - Backup MYSQL Encapsulated Plugin v2.0
+# Zen Cart - Backup MYSQL Encapsulated Plugin v2.0.0
 
-*February 2025: This fileset is now very different to the last version in the Zen Cart Plugins, but will not be uploaded there until there is some feedback from users.*
+*February 2025: This fileset is now very different to the last version in the Zen Cart Plugins.*
 
 ## Functionality
 Backup/Restore your database from the Zen Cart Admin.  
@@ -8,7 +8,7 @@ Use for backup security or for fast and easy restores to your development server
 
 Compatible with Zen Cart 2.1+ and php 8+.
 
-This add-on works much faster than a php-scripted backup tool and supports backups of "huge" databases. Supports zip and gzip in unix and Windows servers.
+This add-on works much faster than a php-scripted backup tool and supports backups of "huge" databases. Supports zip and gzip in Unix and Windows servers.
 
 Created by: DrByte  
 Donations:  Please support Zen Cart!  paypal@zen-cart.com  - Thank you!
@@ -28,6 +28,14 @@ for more information on such possibilities.
 
 Does not work on GoDaddy servers or other servers where the database is hosted on a different physical machine
 
+This tool looks for the mysql binary tools "mysql" and "mysqldump" to perform imports/exports.
+
+There is debugging output available by adding &debug=on to the url.
+
+In many cases, Windows servers will prevent the use of exec() commands by virtue of the fact that Windows restricts the Internet Guest Account from being allowed to run cmd.exe.  
+To override this, you would need to alter the security permissions on cmd.exe and grant the Internet Guest Account read/execute as "Special Access" permissions.  
+NOTE: This may be a security risk to your server, so it's best to consult with your security expert before making such a change.
+
 ## Installation
 1. Copy all the files from */files/zc_plugins/* to your development site for testing before copying to your production server.
 1. Admin->Modules->Plugin Manager->Select the plugin and Install it.  
@@ -38,16 +46,22 @@ by CHMOD 777 on the */ADMIN_FOLDER/backups* folder, either by shell console
 or by FTP program. CHMOD777 means read/write/execute permissions for everyone.
 Some servers don't permit use of 777 (blank screen or 500 error), in which case 755 will be required.
 
-1. There is an optional define you may enable in  
-/admin/includes/extra_datafiles/backup_mysql.php  
-
-		//define('BACKUP_MYSQL_SERVER_NAME', 'YOUR_SERVER_NAME');  
-in which you may put the name of your production server  (use the name that is shown in the Admin header in front of the timezone).  
-This will allow a popup warning if you try to restore to that production server instead of your local development server.
 
 ## Use
 Admin->Tools->MySQL Database Backup-Restore
 
+When you open the page the script will attempt to locate the mysql executables used for backups and restores.  
+If it finds them, it will save that location in the database for future use.  
+If it does not find them, you will need to add your specific path in  
+
+/admin/includes/extra_datafiles/backup_mysql.php  
+
+		define('BACKUP_MYSQL_LOCAL_EXE_PATH', '');  
+		define('BACKUP_MYSQL_PRODUCTION_EXE_PATH', '');  
+
+If you continue to have problems, you may add &debug=on to the url to see debugging information.
+
+### Backup
 You may download a backup file directly on creation (not saving it on the server) by selecting the appropriate checkbox prior to the backup.
 
 You can also download previous backup files from the list by clicking on the small down-arrow icon to the left of the file name.  
@@ -66,20 +80,16 @@ Add this to the end of the .htaccess file:
 	</IfModule>
 	</FilesMatch>
 
-## Info
-This tool looks for the mysql binary tools "mysql" and "mysqldump" to perform imports/exports.
+The availability of Gzip/Zip compression depends on your server configuration, but should be automatically detected.
 
-There is a great deal of debugging output available by adding &debug=1 to the url.
+### Restore
 
-If for some reason it's not finding the tools automatically, you can edit the file  
+1. There is an optional define you may edit in  
 /admin/includes/extra_datafiles/backup_mysql.php  
-and specify the correct path to these utilities for your server, by defining the LOCAL_EXE_MYSQL and LOCAL_EXE_MYSQLDUMP constants.
 
-Windows servers may require this.... but some detection is already built-in for standard paths on Windows configurations, so give it a try as-is first.
-
-In many cases, Windows servers will prevent the use of exec() commands by virtue of the fact that Windows restricts the Internet Guest Account from being allowed to run cmd.exe.  
-To override this, you would need to alter the security permissions on cmd.exe and grant the Internet Guest Account read/execute as "Special Access" permissions.  
-NOTE: This may be a security risk to your server, so it's best to consult with your security expert before making such a change.
+		define('BACKUP_MYSQL_SERVER_NAME', 'YOUR_SERVER_NAME');  
+in which you may put the name of your production server  (use the name that is shown in the Admin header in front of the timezone).  
+This will allow a popup warning if you try to restore to that production server instead of your local development server. It won't stop it, it's just to give you pause for thought!
 
 ## Why is this plugin not included with Zen Cart?
 https://github.com/zencart/zencart/issues/3050

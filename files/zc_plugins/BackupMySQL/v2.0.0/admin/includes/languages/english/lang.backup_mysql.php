@@ -8,7 +8,7 @@ declare(strict_types=1);
  * @license http://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
  * @author Dr.Byte
  * @author torvista
- * @version $Id: torvista 2025-01-17
+ * @version $Id: lang.backup_mysql.php torvista 02 Feb 2025
  */
 
 $define = [
@@ -69,7 +69,7 @@ $define = [
     'TEXT_RESTORE_NO_COMPRESSION_METHOD' => '<strong>%s</strong> not supported for Restore.',
     'TEXT_TEMP_SQL_DELETED' => 'Temporary file "%s" deleted',
     'TEXT_TEMP_SQL_NOT_DELETED' => 'Temporary file "%s" NOT deleted',
-    'TEXT_WARNING_REMOTE_RESTORE' => 'You appear to be restoring to the PRODUCTION site (<strong>%s</strong>): are you SURE?',
+    'TEXT_WARNING_REMOTE_RESTORE' => 'You appear to be restoring to the PRODUCTION site (%s): ARE YOU SURE?',
     'WARNING_NOT_SECURE_FOR_DOWNLOADS' => '<span class="errorText">NOTE: You do not have SSL enabled. Any downloads you do from this page will not be encrypted. Doing backups and restores will be fine, but the download/upload of files from/to the server presents a security risk.',
 ];
 

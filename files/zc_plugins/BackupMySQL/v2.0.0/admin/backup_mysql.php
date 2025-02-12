@@ -8,7 +8,7 @@ declare(strict_types=1);
  * @license http://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
  * @author Dr.Byte
  * @author torvista
- * @version $Id: torvista 01 Feb 2025
+ * @version $Id: backup_mysql.php torvista 12 Feb 2025
  */
 
 /** phpStorm
@@ -16,17 +16,7 @@ declare(strict_types=1);
  * @var messageStack $messageStack
  */
 
-// determine the operating system, to use the correct quotes around the  password
-$os_win = str_starts_with(strtoupper(PHP_OS), 'WIN');
-if ($os_win) {
-    define('OS_DELIM', '"');
-} else {
-    define('OS_DELIM', "'");
-}
-
 require('includes/application_top.php');
-
-//echo ini_get('memory_limit');
 
 /**
  * @param $path
@@ -59,7 +49,6 @@ function checkMysqlPath($path): array
  *
  * @param  string  $inFilename  Input filename
  * @param  int  $level  Compression level (default: 9)
- *
  * @return string Output filename
  * @throws Exception if the input or output file cannot be opened
  *
@@ -101,6 +90,14 @@ function gzcompressfile(string $inFilename, int $level = 9): string
     return $gzFilename;
 }
 
+// determine the operating system, to use the correct quotes around the password
+$os_win = str_starts_with(strtoupper(PHP_OS), 'WIN');
+if ($os_win) {
+    define('OS_DELIM', '"');
+} else {
+    define('OS_DELIM', "'");
+}
+
 $dump_params = '';
 $restore_file = '';
 $resultcodes = '';
@@ -131,6 +128,7 @@ if (is_dir(DIR_FS_BACKUP)) {
 if ($debug && $dir_ok) {
     $messageStack->add('Backup Directory: "' . DIR_FS_BACKUP . '" valid.', 'success');
 }
+
 // check to see if open_basedir restrictions in effect -- if so, likely won't be able to use this tool.
 $flag_basedir = false;
 $open_basedir = ini_get('open_basedir');
@@ -162,16 +160,16 @@ if ($exec_disabled || $shell_exec_disabled) {
     $messageStack->add(ERROR_PHP_DISABLED_FUNCTIONS . $php_disabled_functions, 'info');
 }
 
-//Compression
-//GZIP
-//
-//$gzip_enabled = function_exists('ob_gzhandler') && ini_get('zlib.output_compression');
-$gzip_enabled = true;
-
-//ZIP
+//COMPRESSION
+//gzip
+$gzip_enabled = function_exists('ob_gzhandler') && ini_get('zlib.output_compression');
+if ($debug) {
+   $gzip_enabled ? $messageStack->add('GZIP compression available', 'success') : $messageStack->add('GZIP compression not available (function "ob_gzhandler" not found or option "zlib.output_compression" not enabled', 'caution');
+}
+//zip
 $zip_enabled = class_exists('ZipArchive');
 if ($debug) {
-    $messageStack->add($zip_enabled ? 'ZIP compression enabled in PHP' : 'ZIP compression not enabled in PHP (class ZipArchive not found', 'info');
+    $zip_enabled ? $messageStack->add('ZIP compression available', 'success') : $messageStack->add('ZIP compression not available in PHP installation (class ZipArchive not found)', 'caution');
 }
 
 // WHERE ARE THE MYSQL EXECUTABLES?
@@ -180,10 +178,10 @@ $mysql_exe = 'unknown';
 $mysqldump_exe = 'unknown';
 $path_found = '';
 
-// try the last successful path saved
+// First try the last successful path saved
 if (defined('BACKUP_MYSQL_LOCATION')) {
     if ($debug) {
-        $messageStack->add('BACKUP_MYSQL_LOCATION = "' . BACKUP_MYSQL_LOCATION, 'info');
+        $messageStack->add('database constant "BACKUP_MYSQL_LOCATION" = "' . BACKUP_MYSQL_LOCATION, 'info');
     }
     [$mysql_exe, $mysqldump_exe] = checkMysqlPath(BACKUP_MYSQL_LOCATION);
 }
@@ -192,15 +190,11 @@ if (defined('BACKUP_MYSQL_LOCATION') && ($mysql_exe !== 'unknown' && $mysqldump_
     if ($debug) {
         $messageStack->add('MySQL tools found from BACKUP_MYSQL_LOCATION: $mysql_exe="' . $mysql_exe . '", $mysqldump_exe="' . $mysqldump_exe . '"', 'success');
     }
-// or, if DB constant is not valid
+// or, if DB constant was not valid
 } else {
 // The following code attempts to locate the executables programmatically and by checking some common paths.
-// But if this fails, you will have to define the locations manually in
-// admin/includes/extra_datafiles/backup_mysql.php file
-// where
-// MYSQL_EXE and MYSQLDUMP_EXE: production server
-// MYSQL_EXE_LOCAL and MYSQLDUMP_EXE_LOCAL: development server
-// These could be overridden in the URL by specifying &tool=/path/to/foo/bar/plus/utilname, depending on server support
+// If this fails, you will have to define the locations manually in
+// admin/includes/extra_datafiles/backup_mysql.php
 
 // Try and get some paths automatically
     $possiblePaths = [];
@@ -208,60 +202,74 @@ if (defined('BACKUP_MYSQL_LOCATION') && ($mysql_exe !== 'unknown' && $mysqldump_
 //Windows
     if ($os_win) {
         $basedir_result = $db->Execute("SHOW VARIABLES LIKE 'basedir'");
-        foreach ($basedir_result as $result) {
-            $path = $result['Value'];
-            //check the path
-            if (preg_match('/^[A-Z]:/i', $path)) {//path has a drive letter
-                /*if ($debug) {
-                    $messageStack->add(__LINE__ . ': $path=' . $path, 'info');
-                }*/
-                $paths_auto = $path . 'bin/';
-            } else {//path has no drive letter: portable installation Xampp?
-                $possiblePaths = array_merge(range('A', 'Z'), range('a', 'z'));
-                array_walk($possiblePaths, static function (&$value, $key, $path) {
-                    $value .= $path . '/bin/';
-                }, ':' . $path);//make an array of all the possible drives+path
+       /* if ($debug) {
+            $messageStack->add(__LINE__ . ': $basedir_result=' . print_r($basedir_result, true), 'info');
+        }*/
+        if (!$basedir_result->EOF) {
+            foreach ($basedir_result as $result) {
+                $path = $result['Value'];
+                // check the path
+                // path has a drive letter
+                if (preg_match('/^[A-Z]:/i', $path)) {
+                    /*if ($debug) {
+                        $messageStack->add(__LINE__ . ': $path=' . $path, 'info');
+                    }*/
+                    $paths_auto = $path . 'bin/';
+                // path has no drive letter: portable installation, Xampp?
+                } else {
+                    $possiblePaths = array_merge(range('A', 'Z'), range('a', 'z'));
+                    // make an array of all the possible drives+path
+                    array_walk($possiblePaths, static function (&$value, $key, $path) {
+                        $value .= $path . '/bin/';
+                    }, ':' . $path);
+                }
             }
         }
+//Unix
     } elseif ($shell_exec_disabled) {
         $messageStack->add(ERROR_SHELL_EXEC_DISABLED, 'warning');
-//Unix "which" command finds the executable.
+ // Unix "which" command may find the executable.
     } else {
         $which_mysql = @shell_exec('which mysql');
         if ($which_mysql !== null && $which_mysql !== false) {
             $paths_auto = str_replace('mysql', '', trim($which_mysql));
-                }
+        }
     }
     if ($debug) {
-        $messageStack->add('Auto-Detected path to check:"' . $paths_auto . '"', 'info');
+        $messageStack->add('auto-detected path:"' . $paths_auto . '"', 'info');
     }
 
-    //is a path manually defined in /extra_datafiles?
+    // Additional paths for specific servers (local/remote) can be manually defined in /extra_datafiles
     $path_file1 = '';
     $path_file2 = '';
-    if (defined('LOCAL_MYSQL_EXE')) {
-        $path_file1 = str_replace('mysql.exe', '', MYSQL_EXE) . '/';
-        $path_file2 = str_replace('mysql', '', MYSQL_EXE) . '/';
+    if (defined('BACKUP_MYSQL_LOCAL_EXE_PATH') && BACKUP_MYSQL_LOCAL_EXE_PATH !== '') {
+        $path_file1 = BACKUP_MYSQL_LOCAL_EXE_PATH;
+        if ($debug) {
+            $messageStack->add('add Path from BACKUP_MYSQL_LOCAL_EXE_PATH: "' . $path_file1 . '"', 'info');
+        }
+        array_unshift($possiblePaths, $path_file1);
     }
-    if (!empty($path_file1)) {
-        $possiblePaths[] = $path_file1;
+    if (defined('BACKUP_MYSQL_PRODUCTION_EXE_PATH') && BACKUP_MYSQL_PRODUCTION_EXE_PATH !== '') {
+        $path_file2 = BACKUP_MYSQL_PRODUCTION_EXE_PATH;
+        if ($debug) {
+            $messageStack->add('add Path from BACKUP_MYSQL_PRODUCTION_EXE_PATH: "' . $path_file2 . '"', 'info');
+        }
+        array_unshift($possiblePaths, $path_file2);
     }
-    if (!empty($path_file1)) {
-        $possiblePaths[] = $path_file2;
-    }
-
+    
 //some possible paths to search
     $pathsearch = array_merge($possiblePaths, [
         $paths_auto,
         '/usr/bin/',
         '/usr/local/bin/',
         '/usr/local/mysql/bin/',
+        '\'c:/Program Files/MySQL/MySQL Server 5.0/bin/\'',
+        '\'d:\\Program Files\\MySQL\\MySQL Server 5.0\\bin\\\'',
         'c:/mysql/bin/',
+        'c:/server/mysql/bin/',
+        'c:/xampp/mysql/bin/',
         'd:/mysql/bin/',
         'e:/mysql/bin/',
-        'c:/server/mysql/bin/',
-        '\'c:/Program Files/MySQL/MySQL Server 5.0/bin/\'',
-        '\'d:\\Program Files\\MySQL\\MySQL Server 5.0\\bin\\\''
     ]);
 
     $pathsearch = array_merge($pathsearch, explode(':', $open_basedir));
@@ -271,7 +279,7 @@ if (defined('BACKUP_MYSQL_LOCATION') && ($mysql_exe !== 'unknown' && $mysqldump_
         $path = str_replace(['\\', '//', "'"], ['/', '/', ""], $path);
         $path = (!str_ends_with($path, '/') && !str_ends_with($path, '\\')) ? $path . '/' : $path; // add a '/' to the end if missing
         if ($debug) {
-            $messageStack->add('Checking Path: "' . $path . '"', 'info');
+            $messageStack->add('checking Path: "' . $path . '"', 'info');
         }
 
         [$mysql_exe, $mysqldump_exe] = checkMysqlPath($path);
@@ -294,11 +302,11 @@ if (($shell_exec_disabled || $debug) && !empty($path_found)) {
     }
     //store path in db
     $db->Execute(
-        "INSERT INTO " . TABLE_CONFIGURATION . "
-                        (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, date_added)
-                        VALUES
-                        ('Backup MySQL: mysql tools location', 'BACKUP_MYSQL_LOCATION', '" . $path_found . "', 'Backup MySQL: mysql executables location', 6, now())
-                        ON DUPLICATE KEY UPDATE configuration_value ='" . $path_found . "'"
+        'INSERT INTO ' . TABLE_CONFIGURATION . '
+                  (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, date_added)
+                  VALUES
+                  ("Backup MySQL: mysql tools location", "BACKUP_MYSQL_LOCATION", "' . $path_found . '", "Backup MySQL: mysql executables location", 6, now())
+                  ON DUPLICATE KEY UPDATE configuration_value ="' . $path_found . '"'
     );
 }
 
@@ -307,7 +315,7 @@ $action = $_GET['action'] ?? '';
 if (zen_not_null($action)) {
     switch ($action) {
         case 'forget':
-            $db->Execute("DELETE FROM " . TABLE_CONFIGURATION . " WHERE configuration_key = 'BACKUP_MYSQL_LAST_RESTORE'");
+            $db->Execute('DELETE FROM ' . TABLE_CONFIGURATION . ' WHERE configuration_key = "' . BACKUP_MYSQL_LAST_RESTORE . '"');
             $messageStack->add_session(SUCCESS_LAST_RESTORE_CLEARED, 'success');
             zen_redirect(zen_href_link(FILENAME_BACKUP_MYSQL, ($debug ? 'debug=ON' : '')));
             break;
@@ -735,11 +743,11 @@ if (zen_not_null($action)) {
                     if ($load_results === 0) {
                         // Store the last-restore-date, if successful. Update key if it exists rather than delete and insert or the insert increments the id
                         $db->Execute(
-                            "INSERT INTO " . TABLE_CONFIGURATION . "
-                        (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, date_added)
-                        VALUES
-                        ('Last Database Restore', 'BACKUP_MYSQL_LAST_RESTORE', '" . $restore_from . "', 'Last database restore file', 6, now())
-                        ON DUPLICATE KEY UPDATE configuration_value ='" . $restore_from . "'"
+                            'INSERT INTO ' . TABLE_CONFIGURATION . '
+                                     (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, date_added) 
+                                     VALUES 
+                                     ("Last Database Restore", "BACKUP_MYSQL_LAST_RESTORE", "' . $restore_from . '", "Last database restore file", 6, now()) 
+                                     ON DUPLICATE KEY UPDATE configuration_value ="' . $restore_from . '"'
                         );
 
                         // Was a temp file used from a compressed (.zip, .gz) file?
@@ -1066,11 +1074,12 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
 </div>
 <!-- body_eof //-->
 <!-- footer //-->
-<?php
-require DIR_WS_INCLUDES . 'footer.php'; ?>
+<?php require DIR_WS_INCLUDES . 'footer.php'; ?>
 <!-- footer_eof //-->
 <?php
-if (defined('BACKUP_MYSQL_SERVER_NAME') && gethostname() === BACKUP_MYSQL_SERVER_NAME) { ?>
+// Show a popup alert if restoring to the PRODUCTION server
+// Set the production server name in /extra_datafiles/backup_mysql.php 
+if (defined('BACKUP_MYSQL_SERVER_NAME') && BACKUP_MYSQL_SERVER_NAME !== '' && gethostname() === BACKUP_MYSQL_SERVER_NAME) { ?>
     <script>
         $("#restoreLocalNowButton, #restoreNowButton").on("click", function () {
             return confirm('<?= sprintf(TEXT_WARNING_REMOTE_RESTORE, BACKUP_MYSQL_SERVER_NAME); ?>');
@@ -1080,5 +1089,4 @@ if (defined('BACKUP_MYSQL_SERVER_NAME') && gethostname() === BACKUP_MYSQL_SERVER
 } ?>
 </body>
 </html>
-<?php
-require DIR_WS_INCLUDES . 'application_bottom.php'; ?>
+<?php require DIR_WS_INCLUDES . 'application_bottom.php';
