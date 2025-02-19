@@ -8,7 +8,7 @@ declare(strict_types=1);
  * @license http://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
  * @author Dr.Byte
  * @author torvista
- * @version $Id: backup_mysql.php torvista 12 Feb 2025
+ * @version $Id: backup_mysql.php torvista 19 Feb 2025
  */
 
 /** phpStorm
@@ -1039,7 +1039,7 @@ require DIR_WS_INCLUDES . 'header.php'; ?>
                         $heading[] = ['text' => '<strong>' . $buInfo->file . '</strong>'];
 
                         $contents[] = ['text' => TEXT_INFO_DATE . ' ' . $buInfo->date];
-                        $contents[] = ['text' => TEXT_INFO_SIZE . ' ' . $buInfo->size];
+                        $contents[] = ['text' => TEXT_INFO_SIZE . ' ' . number_format(($buInfo->size)/1048576, 2) . ' MB'];
                         $contents[] = ['text' => TEXT_INFO_COMPRESSION . ' ' . $buInfo->compression];
 
                         // Disable restore if compression not supported
