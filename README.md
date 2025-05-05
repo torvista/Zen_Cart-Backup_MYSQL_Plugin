@@ -10,7 +10,7 @@ Compatible with Zen Cart 2.1+ and php 8+.
 
 This add-on works much faster than a php-scripted backup tool and supports backups of "huge" databases. Supports zip and gzip in Unix and Windows servers.
 
-Created by: DrByte  
+Originally created by: DrByte  
 Donations:  Please support Zen Cart!  paypal@zen-cart.com  - Thank you!
 
 Plugin History: https://www.zen-cart.com/downloads.php?do=file&id=7  
