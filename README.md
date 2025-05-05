@@ -110,9 +110,8 @@ Features:
 * handle a MariaDB incompatibility bug with some dump files
 
 misc:  
-move Last Restored and buttons outside file list table 
-remove/replace obsolete html4 tags, br / to br, replaced nested table structure with divs, use null coalesce, short array syntax, use admin html_head, 
-moved tool locations defines to extra_datafiles, converted language file to lang. format, alpha-sort constants, formatting, use short echo tags, remove unused td of download icon, remove unused row hover effect, remove br tags from infobox, add th tags to table, simplifications (use str_starts_with, str_ends with etc., use of $dir_ok, $exec_disabled, unnecessary clauses), disable check for return value of zen_remove, use CSS buttons, use Kb for size, simplify use of $debug, strict comparisons, SSL warnings, use constant BACKUP_MYSQL_LAST_RESTORED, make $debug parameter  persist on all buttons, different quote styles used for Windows/Unix (fixes problem with some passwords), endless debugging output.
+move Last Restored and buttons outside file list table, remove/replace obsolete html4 tags, br / to br, replaced nested table structure with divs, use null coalesce, short array syntax, use admin html_head, 
+moved tool locations defines to extra_datafiles, converted language file to lang. format, alpha-sort constants, formatting, use short echo tags, remove unused td of download icon, remove unused row hover effect, remove br tags from infobox, add th tags to table, simplifications (use str_starts_with, str_ends with etc.., use of $dir_ok, $exec_disabled, unnecessary clauses), disable check for return value of zen_remove, use CSS buttons, use Kb for size, simplify use of $debug, strict comparisons, SSL warnings, use constant BACKUP_MYSQL_LAST_RESTORED, make $debug parameter persist on all buttons, allow for different quote styles in Windows/Unix (fixes problem with some passwords), endless debugging output.
 
 July 2020 - Fixed warnings about undefined constants. Fixed undefined offset during restores.  
 June 2020 - Fixed Warning: "continue" targeting switch is equivalent to "break". Did you mean to use "continue 2"? in backup_mysql.php on line 518 $mprough  
