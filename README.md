@@ -1,6 +1,6 @@
 # Zen Cart - Backup MYSQL Encapsulated Plugin v2.0.0
 
-*February 2025: This fileset is now very different to the last version in the Zen Cart Plugins.*
+*December 2025: This fileset is now very different to the last version in the Zen Cart Plugins.*
 
 ## Functionality
 Backup/Restore your database from the Zen Cart Admin.  
