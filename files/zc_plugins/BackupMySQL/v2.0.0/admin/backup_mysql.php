@@ -8,7 +8,7 @@ declare(strict_types=1);
  * @license http://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
  * @author Dr.Byte
  * @author torvista
- * @version $Id: backup_mysql.php torvista 19 Feb 2025
+ * @version $Id: backup_mysql.php torvista 30 April 2025
  */
 
 /** phpStorm
@@ -88,6 +88,36 @@ function gzcompressfile(string $inFilename, int $level = 9): string
 
     // Return the new filename
     return $gzFilename;
+}
+
+if (!function_exists('mv_printVar')) {
+    /**
+     * @param $a
+     * function generates formatted debugging output
+     */
+    function mv_printVar($a): void
+    {
+        $backtrace = debug_backtrace()[0];
+        $fh = fopen($backtrace['file'], 'rb');
+        $line = 0;
+        $code = '';
+        while (++$line <= $backtrace['line']) {
+            $code = fgets($fh);
+        }
+        fclose($fh);
+        if ($code !== false) {
+            preg_match('/' . __FUNCTION__ . '\s*\((.*)\)\s*;/u', $code, $name);
+        } else {
+            $name = '';
+        }
+        echo '<pre>';
+        if (!empty($name[1])) {
+            echo '<strong>' . trim($name[1]) . '</strong> (' . gettype($a) . "):\n";
+        }
+        //var_export($a);
+        print_r($a);
+        echo '</pre><br>';
+    }
 }
 
 // determine the operating system, to use the correct quotes around the password

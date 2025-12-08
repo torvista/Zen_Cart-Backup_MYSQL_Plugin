@@ -7,7 +7,7 @@ declare(strict_types=1);
  * @copyright Copyright 2024 Zen Cart Development Team
  * @license http://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
  * @author torvista
- * @version $Id: torvista 2025-01-17
+ * @version $Id: torvista 30 April 2025
  */
 
 use Zencart\PluginSupport\ScriptedInstaller as ScriptedInstallBase;
@@ -22,11 +22,15 @@ class ScriptedInstaller extends ScriptedInstallBase
             'toolsBackupMysql', 'BOX_TOOLS_BACKUP_MYSQL', 'FILENAME_BACKUP_MYSQL', '', 'tools', 'Y');
 
         $this->deleteConfigurationKeys(['DB_LAST_RESTORE']); //DB_LAST_RESTORE was original configuration_key
+
+        parent::executeInstall();
     }
 
     protected function executeUninstall(): void
     {
         zen_deregister_admin_pages(['toolsBackupMysql']);
         $this->deleteConfigurationKeys(['DB_LAST_RESTORE', 'BACKUP_MYSQL_LAST_RESTORE', 'BACKUP_MYSQL_LOCATION']); //DB_LAST_RESTORE was original configuration_key
+
+        parent::executeUninstall();
     }
 }
